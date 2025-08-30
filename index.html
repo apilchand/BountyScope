@@ -116,27 +116,39 @@
                                 <i class="ph-bold ph-list-dashes accent-text text-lg"></i>
                                 <span class="font-mono text-neutral-300 font-medium text-sm">Dependency Installation Guide</span>
                             </div>
-                            <button id="copyDepsBtn" class="copy-btn bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-medium py-1 px-3 rounded-md flex items-center gap-2 transition-colors active:scale-95" aria-label="Copy dependencies">
-                                <i class="ph-bold ph-copy text-sm"></i><span>Copy List</span>
-                            </button>
+                             <div class="flex items-center gap-2">
+                                <button id="generateInstallerBtn" class="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-medium py-1 px-3 rounded-md flex items-center gap-2 transition-colors active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed" disabled aria-label="Generate Installer Script">
+                                    <i class="ph-bold ph-gear text-sm"></i><span>Generate Installer</span>
+                                </button>
+                                <button id="copyDepsBtn" class="copy-btn hidden bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-medium py-1 px-3 rounded-md flex items-center gap-2 transition-colors active:scale-95" aria-label="Copy Installer Script">
+                                    <i class="ph-bold ph-copy text-sm"></i><span>Copy Script</span>
+                                </button>
+                             </div>
                         </div>
                          <div class="script-output p-4 max-h-[26rem] overflow-y-auto">
                             <div id="depsList">
-                                <p class="text-neutral-400 font-mono">Loading dependency installation guide...</p>
+                                <p class="text-neutral-400 font-mono">Select tools and click "Generate Installer" to create a dependency installation script.</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div id="searchContainer" class="max-w-7xl mx-auto mb-8 animate-slide-up" style="animation-delay: 0.2s;">
-            <div class="relative">
+        
+        <!-- Search and Filter Section -->
+        <div class="max-w-7xl mx-auto mb-4 animate-slide-up" style="animation-delay: 0.2s;">
+            <!-- Search Input -->
+            <div class="relative mb-4">
                 <i class="ph ph-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-neutral-500 text-xl"></i>
-                <input type="text" id="searchInput" placeholder="Search phases or tools (e.g., 'subdomain', 'nmap', 'xss')..." class="w-full pl-12 pr-12 py-4 rounded-lg themed-input transition-all duration-300 font-mono text-base">
+                <input type="text" id="searchInput" placeholder="Search for tools or phases (e.g., nmap, discovery)..." class="w-full pl-12 pr-12 py-4 rounded-lg themed-input transition-all duration-300 font-mono text-base">
                 <button id="clearSearchBtn" class="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-red-500 transition-all opacity-0 invisible" aria-label="Clear search"><i class="ph-bold ph-x-circle text-xl"></i></button>
             </div>
+            <!-- Tag Filters -->
+            <div id="tagFilterContainer" class="flex flex-wrap justify-center gap-2">
+                <!-- Tag buttons will be inserted here by JS -->
+            </div>
         </div>
+
         
         <div class="max-w-7xl mx-auto mb-4 flex justify-end gap-2 animate-slide-up" style="animation-delay: 0.25s;">
             <button id="expandAllBtn" class="text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-medium py-1.5 px-3 rounded-md transition-colors active:scale-95">Expand All</button>
@@ -148,7 +160,7 @@
         <div id="noResultsMessage" class="hidden max-w-7xl mx-auto text-center py-16 px-6 themed-container rounded-xl mt-4">
             <i class="ph-bold ph-binoculars text-5xl mb-4 text-neutral-500"></i>
             <p class="text-xl font-bold text-white">No Matching Phases or Tools Found</p>
-            <p class="text-neutral-400 mt-1">Try searching for something else, like "DNS", "crawler", or "vulnerability".</p>
+            <p class="text-neutral-400 mt-1">Try searching for something else or clearing your filters.</p>
         </div>
     </div>
 </body>

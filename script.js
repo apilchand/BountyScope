@@ -1,7 +1,7 @@
 (() => {
     'use strict';
     // --- SECTION: Constants & Configuration ---
-    const SUCCESS_COLOR = '#00d4ff'; // Updated Color
+    const SUCCESS_COLOR = '#00d4ff'; 
     const ERROR_COLOR = '#ef4444';
     const WARNING_COLOR = '#facc15';
     const CSS_CLASSES = {
@@ -10,11 +10,11 @@
         COPY_FAILURE: 'is-failed',
     };
     const PRESETS = {
-        PASSIVE: ['WHOIS Lookup', 'Dig DNS Records', 'Subfinder', 'Assetfinder', 'Amass Enum', 'Chaos DB'],
-        QUICK: ['Subfinder', 'Assetfinder', 'httpx Probe', 'Naabu Fast Scan', 'Nuclei Templates'],
-        DEEP: ['WHOIS Lookup', 'Dig DNS Records', 'Subfinder', 'Assetfinder', 'Amass Enum', 'httpx Probe', 'Gowitness', 'Naabu Fast Scan', 'Nmap Service Detection', 'Katana Crawler', 'Waybackurls', 'ParamSpider', 'Nuclei Templates'],
-        WEB_VULN: ['Subfinder', 'httpx Probe', 'Katana Crawler', 'Waybackurls', 'GF Patterns', 'ParamSpider', 'Nuclei Templates', 'Dalfox XSS', 'SQLMap'],
-        FULL: [ 'WHOIS Lookup', 'Dig DNS Records', 'DNSRecon', 'Subfinder', 'Assetfinder', 'Amass Enum', 'Findomain', 'Chaos DB', 'dnsx Resolution', 'httpx Probe', 'Gowitness', 'Aquatone', 'Naabu Fast Scan', 'Nmap Service Detection', 'Katana Crawler', 'Gospider', 'Waybackurls', 'Gau (Get All URLs)', 'ffuf Fuzzer', 'Gobuster Directory', 'subjs', 'LinkFinder', 'SecretFinder', 'ParamSpider', 'Arjun', 'Nuclei Templates', 'Nuclei CVE Scan', 'Dalfox XSS', 'SQLMap', 'WPScan', 'Nikto Web Scanner' ],
+        PASSIVE: ['01', '02'],
+        QUICK: ['02', '03', '05', '12'],
+        DEEP: ['01', '02', '03', '04', '05', '06', '09', '12'],
+        WEB_VULN: ['02', '03', '06', '09', '12', '13'],
+        FULL: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14'],
     };
 
     // --- SECTION: DOM Elements ---
@@ -45,11 +45,13 @@
         depsContainer: document.getElementById('depsContainer'),
         copyDepsBtn: document.getElementById('copyDepsBtn'),
         depsList: document.getElementById('depsList'),
+        generateInstallerBtn: document.getElementById('generateInstallerBtn'),
         workflowMapContainer: document.getElementById('workflowMapContainer'),
         workflowMap: document.getElementById('workflowMap'),
         searchInput: document.getElementById('searchInput'),
         clearSearchBtn: document.getElementById('clearSearchBtn'),
         noResultsMessage: document.getElementById('noResultsMessage'),
+        tagFilterContainer: document.getElementById('tagFilterContainer'),
         expandAllBtn: document.getElementById('expandAllBtn'),
         collapseAllBtn: document.getElementById('collapseAllBtn'),
     };
@@ -58,24 +60,25 @@
     let targetDomain = '';
     let statusTimeout;
     let generatedScriptContent = '';
+    let generatedInstallerContent = '';
 
-    // --- SECTION: Data ---
+    // --- SECTION: Data (with curated tags) ---
     const reconSteps = [
-        { phase: "01", title: "Domain Intelligence & Technology Profiling", workflowName: "Domain Intel", description: "Establish baseline intelligence about the target domain including registration details, DNS infrastructure, and underlying technology stack to understand the attack surface.", icon: "ph-detective", tools: [ { name: "WHOIS Lookup", type: "cli", command: "whois [TARGET] | tee [TARGET]_whois.txt", description: "Domain registration and ownership details", category: "info", sourceUrl: "https://www.icann.org/whois" }, { name: "Dig DNS Records", type: "cli", command: "dig +nocmd [TARGET] any +multiline +noall +answer | tee [TARGET]_dns.txt", description: "Complete DNS record enumeration", category: "dns" }, { name: "DNSRecon", type: "cli", command: "dnsrecon -d [TARGET] -t std --xml [TARGET]_dnsrecon.xml", description: "Advanced DNS reconnaissance", category: "dns", sourceUrl: "https://github.com/darkoperator/dnsrecon" }, { name: "Wappalyzer", type: "gui", url: "https://www.wappalyzer.com/lookup/[TARGET]", description: "Technology stack identification", category: "tech", sourceUrl: "https://www.wappalyzer.com/" }, { name: "BuiltWith", type: "gui", url: "https://builtwith.com/?[TARGET]", description: "Comprehensive technology profiler", category: "tech", sourceUrl: "https://builtwith.com/" } ] },
-        { phase: "02", title: "Comprehensive Subdomain Discovery", workflowName: "Subdomain Discovery", description: "Employ multiple passive and active techniques to discover all possible subdomains, expanding the attack surface through various data sources and enumeration methods.", icon: "ph-tree-structure", tools: [ { name: "Subfinder", type: "cli", command: "subfinder -d [TARGET] -all -recursive -o [TARGET]_subfinder.txt", description: "Multi-source passive subdomain discovery", category: "passive", sourceUrl: "https://github.com/projectdiscovery/subfinder" }, { name: "Assetfinder", type: "cli", command: "echo [TARGET] | assetfinder --subs-only >> [TARGET]_assetfinder.txt", description: "Fast subdomain and asset discovery", category: "passive", sourceUrl: "https://github.com/tomnomnom/assetfinder" }, { name: "Amass Enum", type: "cli", command: "amass enum -passive -d [TARGET] -config config.ini -o [TARGET]_amass.txt", description: "In-depth subdomain enumeration", category: "active", sourceUrl: "https://github.com/owasp-amass/amass" }, { name: "Findomain", type: "cli", command: "findomain -t [TARGET] -u [TARGET]_findomain.txt", description: "Cross-platform subdomain enumerator", category: "passive", sourceUrl: "https://github.com/findomain/findomain" }, { name: "crt.sh", type: "gui", url: "https://crt.sh/?q=%25.[TARGET]", description: "Certificate transparency logs", category: "passive", sourceUrl: "https://crt.sh" }, { name: "Chaos DB", type: "cli", command: "chaos -d [TARGET] -o [TARGET]_chaos.txt", description: "ProjectDiscovery's subdomain dataset", category: "passive", sourceUrl: "https://github.com/projectdiscovery/chaos-client" } ] },
-        { phase: "03", title: "DNS Resolution & Live Service Detection", workflowName: "Live Host Probing", requires: ['02'], description: "Validate discovered subdomains through DNS resolution and probe for active web services, filtering out dead hosts and identifying accessible endpoints.", icon: "ph-broadcast", tools: [ { name: "dnsx Resolution", type: "cli", command: "cat [TARGET]_all_subs.txt | dnsx -resp -a -aaaa -cname -mx -ns -txt -srv -ptr -caa -soa -axfr -caa -any -o [TARGET]_resolved.txt", description: "Fast DNS resolver with multiple record types", category: "dns", sourceUrl: "https://github.com/projectdiscovery/dnsx" }, { name: "PureDNS", type: "cli", command: "puredns resolve [TARGET]_all_subs.txt -r resolvers.txt -w [TARGET]_puredns_valid.txt", description: "Fast domain resolver and subdomain bruteforcing", category: "dns", sourceUrl: "https://github.com/d3mondev/puredns" }, { name: "httpx Probe", type: "cli", command: "cat [TARGET]_resolved.txt | httpx -title -tech-detect -status-code -favicon -jarm -asn -cdn -probe -fr -random-agent -retries 2 -threads 100 -timeout 10 -o [TARGET]_httpx.txt", description: "Advanced HTTP toolkit for probing", category: "http", sourceUrl: "https://github.com/projectdiscovery/httpx" }, { name: "Httprobe", type: "cli", command: "cat [TARGET]_resolved.txt | httprobe -c 50 -t 10000 > [TARGET]_httprobe.txt", description: "Simple HTTP/HTTPS prober", category: "http", sourceUrl: "https://github.com/tomnomnom/httprobe" } ] },
-        { phase: "04", title: "Visual Reconnaissance & Screenshot Analysis", workflowName: "Visual Recon", requires: ['03'], description: "Capture visual screenshots of all live web applications to quickly identify interesting interfaces, outdated software, admin panels, and visual anomalies.", icon: "ph-camera-plus", tools: [ { name: "Gowitness", type: "cli", command: "gowitness file -f [TARGET]_live_hosts.txt -P [TARGET]_screenshots --delay 3 --timeout 15 --resolution 1440,900", description: "Fast web screenshot utility with custom resolution", category: "visual", sourceUrl: "https://github.com/sensepost/gowitness" }, { name: "Aquatone", type: "cli", command: "cat [TARGET]_live_hosts.txt | aquatone -out [TARGET]_aquatone -screenshot-timeout 30000 -http-timeout 10000 -threads 5", description: "Visual inspection with detailed reporting", category: "visual", sourceUrl: "https://github.com/michenriksen/aquatone" }, { name: "WebScreenshot", type: "cli", command: "python3 webscreenshot.py -i [TARGET]_live_hosts.txt -o [TARGET]_webscreenshots", description: "Python-based screenshot tool", category: "visual", sourceUrl: "https://github.com/maK-/webscreenshot" } ] },
-        { phase: "05", title: "Network Scanning & Service Enumeration", workflowName: "Port Scanning", requires: ['03'], description: "Perform comprehensive port scans across all discovered hosts, identify running services, detect versions, and map the complete network topology.", icon: "ph-radar", tools: [ { name: "Naabu Fast Scan", type: "cli", command: "naabu -list [TARGET]_live_hosts.txt -top-ports 1000 -exclude-ports 80,443 -c 50 -rate 1000 -warm-up-time 2 -o [TARGET]_naabu_ports.txt", description: "Ultra-fast port scanner", category: "ports", sourceUrl: "https://github.com/projectdiscovery/naabu" }, { name: "Masscan Ultra-Fast", type: "cli", command: "masscan -p1-65535 -iL [TARGET]_ips.txt --rate=10000 --open -oG [TARGET]_masscan.txt", description: "Internet-scale port scanner", category: "ports", sourceUrl: "https://github.com/robertdavidgraham/masscan" }, { name: "Nmap Service Detection", type: "cli", command: "nmap -sV -sC -O -A --script=default,discovery,safe,vuln -iL [TARGET]_live_hosts.txt -oA [TARGET]_nmap_detailed", description: "Comprehensive service and vulnerability scanning", category: "services", sourceUrl: "https://nmap.org/" }, { name: "RustScan", type: "cli", command: "rustscan -a [TARGET] -r 1-65535 --ulimit 5000 -t 2000 --scripts -- -A -sC", description: "Modern fast port scanner", category: "ports", sourceUrl: "https://github.com/RustScan/RustScan" }, { name: "Shodan", type: "gui", url: "https://www.shodan.io/search?query=hostname:[TARGET]", description: "Internet device search engine", category: "osint", sourceUrl: "https://shodan.io" } ] },
-        { phase: "06", title: "Web Crawling & URL Harvesting", workflowName: "URL Harvesting", requires: ['03'], description: "Systematically crawl discovered web applications and harvest URLs from multiple sources including web archives, search engines, and direct crawling.", icon: "ph-spider", tools: [ { name: "Katana Crawler", type: "cli", command: "katana -list [TARGET]_live_hosts.txt -d 5 -jc -kf all -aff -fx -ef woff,css,png,svg,jpg,woff2,jpeg,gif,svg -o [TARGET]_katana.txt", description: "Next-generation crawling framework", category: "crawler", sourceUrl: "https://github.com/projectdiscovery/katana" }, { name: "Gospider", type: "cli", command: "gospider -S [TARGET]_live_hosts.txt -c 10 -d 5 -t 20 --blacklist jpg,jpeg,gif,css,tif,tiff,png,ttf,woff,woff2,ico,pdf,svg,txt --random-agent -o [TARGET]_gospider", description: "Fast web spider with filtering", category: "crawler", sourceUrl: "https://github.com/jaeles-project/gospider" }, { name: "Waybackurls", type: "cli", command: "cat [TARGET]_live_hosts.txt | waybackurls | anew [TARGET]_wayback.txt", description: "Wayback Machine URL fetcher", category: "archive", sourceUrl: "https://github.com/tomnomnom/waybackurls" }, { name: "Gau (Get All URLs)", type: "cli", command: "echo [TARGET] | gau --blacklist png,jpg,gif,jpeg,swf,woff,gif,svg --threads 5 | anew [TARGET]_gau.txt", description: "Fetch URLs from multiple sources", category: "archive", sourceUrl: "https://github.com/lc/gau" }, { name: "Hakrawler", type: "cli", command: "echo https://[TARGET] | hakrawler -depth 3 -plain | anew [TARGET]_hakrawler.txt", description: "Simple, fast web crawler", category: "crawler", sourceUrl: "https://github.com/hakluke/hakrawler" } ] },
-        { phase: "07", title: "Content Discovery & Directory Fuzzing", workflowName: "Content Fuzzing", requires: ['03'], description: "Systematically discover hidden directories, files, virtual hosts, and other concealed content using advanced wordlist-based fuzzing techniques.", icon: "ph-folder-open", tools: [ { name: "ffuf Fuzzer", type: "cli", command: "ffuf -w /opt/SecLists/Discovery/Web-Content/big.txt -u https://[TARGET]/FUZZ -t 100 -ac -sf -mc 200,204,301,302,307,401,403 -o [TARGET]_ffuf.json", description: "Fast web fuzzer with smart filtering", category: "fuzzer", sourceUrl: "https://github.com/ffuf/ffuf" }, { name: "Gobuster Directory", type: "cli", command: "gobuster dir -u https://[TARGET] -w /opt/SecLists/Discovery/Web-Content/common.txt -t 50 -x php,html,js,txt,json,xml -s 200,204,301,302,307,401,403 -o [TARGET]_gobuster.txt", description: "Directory and file brute-forcer", category: "fuzzer", sourceUrl: "https://github.com/OJ/gobuster" }, { name: "Feroxbuster", type: "cli", command: "feroxbuster -u https://[TARGET] -w /opt/SecLists/Discovery/Web-Content/raft-large-directories.txt -d 2 -t 50 --auto-tune -o [TARGET]_feroxbuster.txt", description: "Fast recursive content discovery", category: "fuzzer", sourceUrl: "https://github.com/epi052/feroxbuster" }, { name: "Dirsearch", type: "cli", command: "dirsearch -u https://[TARGET] -e all -t 50 --random-agent --exclude-status 404,500,502,503 -o [TARGET]_dirsearch.txt", description: "Advanced web path scanner", category: "fuzzer", sourceUrl: "https://github.com/maurosoria/dirsearch" }, { name: "Gobuster VHost", type: "cli", command: "gobuster vhost -u https://[TARGET] -w /opt/SecLists/Discovery/DNS/subdomains-top1million-5000.txt -t 50 --domain [TARGET] -o [TARGET]_vhosts.txt", description: "Virtual host brute-forcer", category: "vhost", sourceUrl: "https://github.com/OJ/gobuster" } ] },
-        { phase: "08", title: "JavaScript Analysis & API Discovery", workflowName: "JS & API Analysis", requires: ['06'], description: "Extract sensitive information, discover hidden API endpoints, analyze client-side code, and identify potential security issues in JavaScript files.", icon: "ph-code", tools: [ { name: "subjs", type: "cli", command: "cat [TARGET]_all_urls.txt | grep -iE '\\.js($|\\?)' | subjs | anew [TARGET]_js_files.txt", description: "JavaScript file extractor", category: "js", sourceUrl: "https://github.com/lc/subjs" }, { name: "LinkFinder", type: "cli", command: "cat [TARGET]_js_files.txt | while read url; do linkfinder -i \"$url\" -o cli; done | anew [TARGET]_linkfinder.txt", description: "Discover endpoints in JS files", category: "js", sourceUrl: "https://github.com/GerbenJavado/LinkFinder" }, { name: "SecretFinder", type: "cli", command: "cat [TARGET]_js_files.txt | while read url; do secretfinder -i \"$url\" -o cli; done | anew [TARGET]_secrets.txt", description: "Find secrets in JavaScript", category: "secrets", sourceUrl: "https://github.com/m4ll0k/SecretFinder" }, { name: "JSParser", type: "cli", command: "cat [TARGET]_js_files.txt | while read url; do jsparser --url \"$url\"; done | anew [TARGET]_jsparser.txt", description: "Parse JavaScript for endpoints", category: "js", sourceUrl: "https://github.com/nahamsec/JSParser" }, { name: "Kiterunner", type: "cli", command: "kr scan [TARGET] -A raft-large-words -x 10 -j 100 --fail-status-codes 404,400 -o [TARGET]_kiterunner", description: "API and content discovery", category: "api", sourceUrl: "https://github.com/assetnote/kiterunner" } ] },
-        { phase: "09", title: "Parameter Discovery & Fuzzing", workflowName: "Parameter Hunting", requires: ['06'], description: "Identify hidden parameters, analyze parameter behavior, and discover potential injection points across all discovered endpoints and forms.", icon: "ph-list-bullets", tools: [ { name: "ParamSpider", type: "cli", command: "paramspider -d [TARGET] --exclude woff,css,js,png,svg,jpg,woff2,jpeg,gif,svg --level high -o [TARGET]_paramspider.txt", description: "Parameter discovery from web archives", category: "params", sourceUrl: "https://github.com/devanshbatham/ParamSpider" }, { name: "Arjun", type: "cli", command: "arjun -u https://[TARGET] --get --post -f /opt/SecLists/Discovery/Web-Content/burp-parameter-names.txt -oT [TARGET]_arjun.txt", description: "HTTP parameter discovery suite", category: "params", sourceUrl: "https://github.com/s0md3v/Arjun" }, { name: "x8 Hidden Parameters", type: "cli", command: "x8 -u https://[TARGET] -w /opt/SecLists/Discovery/Web-Content/burp-parameter-names.txt -X POST --as-body -o [TARGET]_x8.txt", description: "Hidden parameter discovery", category: "params", sourceUrl: "https://github.com/Sh1Yo/x8" }, { name: "GF Patterns", type: "cli", command: "cat [TARGET]_all_urls.txt | gf xss sqli ssrf redirect rce lfi | anew [TARGET]_gf_patterns.txt", description: "Pattern-based URL filtering", category: "patterns", sourceUrl: "https://github.com/tomnomnom/gf" } ] },
-        { phase: "10", title: "Cloud Asset & Storage Discovery", workflowName: "Cloud Discovery", description: "Enumerate cloud infrastructure including S3 buckets, Azure blobs, GCP storage, and other cloud services that may contain sensitive data.", icon: "ph-cloud", tools: [ { name: "S3Scanner", type: "cli", command: "s3scanner -bucket-file [TARGET]_buckets.txt -enumerate -dump", description: "AWS S3 bucket scanner", category: "cloud", sourceUrl: "https://github.com/sa7mon/S3Scanner" }, { name: "Cloud_enum", type: "cli", command: "cloud_enum -k [TARGET] -l [TARGET]_cloud_enum.txt", description: "Multi-cloud asset discovery", category: "cloud", sourceUrl: "https://github.com/initstring/cloud_enum" }, { name: "Lazys3", type: "cli", command: "lazys3 [TARGET]", description: "AWS S3 bucket bruteforcer", category: "s3", sourceUrl: "https://github.com/gwen001/lazys3" }, { name: "CloudBrute", type: "cli", command: "cloudbrute -d [TARGET] -k keyword -w /opt/SecLists/Discovery/Web-Content/common.txt", description: "Cloud infrastructure discovery", category: "cloud", sourceUrl: "https://github.com/0xsha/CloudBrute" } ] },
-        { phase: "11", title: "Git Repository & Source Code Analysis", workflowName: "Source Code Secrets", description: "Search for exposed repositories, leaked credentials, API keys, and sensitive information in public code repositories and git directories.", icon: "ph-git-branch", tools: [ { name: "TruffleHog", type: "cli", command: "trufflehog github --org=[TARGET] --json | jq . > [TARGET]_trufflehog.json", description: "Find secrets in git repositories", category: "secrets", sourceUrl: "https://github.com/trufflesecurity/trufflehog" }, { name: "GitLeaks", type: "cli", command: "gitleaks detect --source . --report-path [TARGET]_gitleaks.json --verbose", description: "Detect secrets in git repos", category: "secrets", sourceUrl: "https://github.com/gitleaks/gitleaks" }, { name: "GitDorker", type: "cli", command: "python3 GitDorker.py -t [TOKEN] -q [TARGET] -d Dorks/medium_dorks.txt -o [TARGET]_gitdorker.txt", description: "GitHub dorking for sensitive info", category: "osint", sourceUrl: "https://github.com/obheda12/GitDorker" }, { name: "GitHound", type: "cli", command: "githound --dig-files --dig-commits --many-results --regex-file regexes.txt --language-file languages.txt --subdomain-file [TARGET]_subdomains.txt", description: "Git repository secret scanner", category: "secrets", sourceUrl: "https://github.com/tillson/githound" } ] },
-        { phase: "12", title: "Vulnerability Scanning & Template-Based Testing", workflowName: "Vulnerability Scanning", requires: ['03'], description: "Execute comprehensive vulnerability scans using template-based tools to identify common security issues, misconfigurations, and known CVEs.", icon: "ph-shield-warning", tools: [ { name: "Nuclei Templates", type: "cli", command: "nuclei -list [TARGET]_live_hosts.txt -t /opt/nuclei-templates/ -severity critical,high,medium -rate-limit 150 -bulk-size 25 -c 25 -o [TARGET]_nuclei.txt", description: "Template-based vulnerability scanner", category: "vuln", sourceUrl: "https://github.com/projectdiscovery/nuclei" }, { name: "Nuclei CVE Scan", type: "cli", command: "nuclei -list [TARGET]_live_hosts.txt -t /opt/nuclei-templates/cves/ -severity critical,high -o [TARGET]_nuclei_cves.txt", description: "CVE-specific vulnerability detection", category: "cve", sourceUrl: "https://github.com/projectdiscovery/nuclei" }, { name: "SSL Labs Test", type: "gui", url: "https://www.ssllabs.com/ssltest/analyze.html?d=[TARGET]", description: "SSL/TLS security analysis", category: "ssl", sourceUrl: "https://www.ssllabs.com/ssltest/" }, { name: "Security Headers", type: "gui", url: "https://securityheaders.com/?q=[TARGET]&followRedirects=on", description: "HTTP security headers analysis", category: "headers", sourceUrl: "https://securityheaders.com/" }, { name: "testssl.sh", type: "cli", command: "testssl.sh --parallel --html --outdir [TARGET]_testssl [TARGET]", description: "Comprehensive SSL/TLS tester", category: "ssl", sourceUrl: "https://github.com/drwetter/testssl.sh" } ] },
-        { phase: "13", title: "Specialized Vulnerability Hunting", workflowName: "Exploit Hunting", requires: ['09'], description: "Deploy specialized tools targeting specific vulnerability classes including XSS, SQLi, SSRF, LFI, and other high-impact security issues.", icon: "ph-bug", tools: [ { name: "Dalfox XSS", type: "cli", command: "dalfox file [TARGET]_xss_urls.txt --deep-domxss --blind [BLIND_SERVER] --only-discovery --ignore-return 302,404 -o [TARGET]_dalfox.txt", description: "Advanced XSS scanner and analyzer", category: "xss", sourceUrl: "https://github.com/hahwul/dalfox" }, { name: "SQLMap", type: "cli", command: "sqlmap -m [TARGET]_sqli_urls.txt --batch --level=5 --risk=3 --tamper=space2comment --random-agent --output-dir=[TARGET]_sqlmap/", description: "Automatic SQL injection tester", category: "sqli", sourceUrl: "http://sqlmap.org/" }, { name: "SSRFmap", type: "cli", command: "python3 ssrfmap.py -r [TARGET]_requests.txt -p url -m readfiles", description: "SSRF detection and exploitation", category: "ssrf", sourceUrl: "https://github.com/swisskyrepo/SSRFmap" }, { name: "NoSQLMap", type: "cli", command: "python3 nosqlmap.py -u https://[TARGET]/endpoint --scan --exploit", description: "NoSQL injection scanner", category: "nosql", sourceUrl: "https://github.com/codingo/NoSQLMap" }, { name: "Commix", type: "cli", command: "python3 commix.py -u https://[TARGET]/page?param=value --batch", description: "Command injection exploiter", category: "rce", sourceUrl: "https://github.com/commixproject/commix" } ] },
-        { phase: "14", title: "CMS & Framework Security Assessment", workflowName: "CMS Scanning", requires: ['03'], description: "Identify and assess Content Management Systems, frameworks, and platforms for known vulnerabilities, misconfigurations, and security weaknesses.", icon: "ph-gear-six", tools: [ { name: "WPScan", type: "cli", command: "wpscan --url https://[TARGET] --enumerate ap,at,cb,dbe,u,m --plugins-detection aggressive --api-token [TOKEN] --format json -o [TARGET]_wpscan.json", description: "WordPress vulnerability scanner", category: "cms", sourceUrl: "https://wpscan.com/" }, { name: "Joomscan", type: "cli", command: "joomscan --url https://[TARGET] --enumerate-components --random-agent", description: "Joomla vulnerability scanner", category: "cms", sourceUrl: "https://github.com/OWASP/joomscan" }, { name: "Droopescan", type: "cli", command: "droopescan scan drupal --url https://[TARGET] --enumerate p,t,u,v", description: "Drupal security scanner", category: "cms", sourceUrl: "https://github.com/droope/droopescan" }, { name: "CMSmap", type: "cli", command: "cmsmap https://[TARGET] -a -d", description: "Multi-CMS vulnerability scanner", category: "cms", sourceUrl: "https://github.com/Dionach/CMSmap" }, { name: "Nikto Web Scanner", type: "cli", command: "nikto -h https://[TARGET] -ssl -evasion 1 -output [TARGET]_nikto.txt", description: "Web server vulnerability scanner", category: "web", sourceUrl: "https://cirt.net/Nikto2" } ] },
-        { phase: "15", title: "Essential Resources & Wordlists", workflowName: "Resource Library", description: "Curated collection of essential wordlists, payloads, and resources for comprehensive security testing and vulnerability research.", icon: "ph-books", isResource: true, tools: [ { name: "SecLists", type: "gui", url: "https://github.com/danielmiessler/SecLists", noTarget: true, description: "Security tester's companion wordlist collection", category: "wordlists", sourceUrl: "https://github.com/danielmiessler/SecLists" }, { name: "PayloadsAllTheThings", type: "gui", url: "https://github.com/swisskyrepo/PayloadsAllTheThings", noTarget: true, description: "Web application security payload repository", category: "payloads", sourceUrl: "https://github.com/swisskyrepo/PayloadsAllTheThings" }, { name: "FuzzDB", type: "gui", url: "https://github.com/fuzzdb-project/fuzzdb", noTarget: true, description: "Dictionary of attack patterns and primitives", category: "fuzzing", sourceUrl: "https://github.com/fuzzdb-project/fuzzdb" }, { name: "GF Patterns", type: "gui", url: "https://github.com/1ndianl33t/Gf-Patterns", noTarget: true, description: "Grep-friendly patterns for bug bounty", category: "patterns", sourceUrl: "https://github.com/1ndianl33t/Gf-Patterns" }, { name: "Nuclei Templates", type: "gui", url: "https://github.com/projectdiscovery/nuclei-templates", noTarget: true, description: "Community-powered vulnerability templates", category: "templates", sourceUrl: "https://github.com/projectdiscovery/nuclei-templates" } ] }
+        { phase: "01", title: "Domain Intelligence & Technology Profiling", workflowName: "Domain Intel", description: "Establish baseline intelligence about the target domain including registration details, DNS infrastructure, and underlying technology stack.", icon: "ph-detective", tools: [ { name: "WHOIS Lookup", type: "cli", command: "whois [TARGET] | tee $RECON_DIR/info/whois.txt", description: "Domain registration details", tags: ["OSINT"], sourceUrl: "https://www.icann.org/whois" }, { name: "Dig DNS Records", type: "cli", command: "dig +nocmd [TARGET] any +multiline +noall +answer | tee $RECON_DIR/info/dns.txt", description: "Complete DNS record enumeration", tags: ["Discovery"] }, { name: "DNSRecon", type: "cli", command: "dnsrecon -d [TARGET] -t std --xml $RECON_DIR/info/dnsrecon.xml", description: "Advanced DNS reconnaissance", tags: ["Discovery", "Active"], sourceUrl: "https://github.com/darkoperator/dnsrecon" }, { name: "Wappalyzer", type: "gui", url: "https://www.wappalyzer.com/lookup/[TARGET]", description: "Technology stack identification", tags: ["Web"], sourceUrl: "https://www.wappalyzer.com/" }, { name: "BuiltWith", type: "gui", url: "https://builtwith.com/?[TARGET]", description: "Comprehensive technology profiler", tags: ["Web"], sourceUrl: "https://builtwith.com/" } ] },
+        { phase: "02", title: "Comprehensive Subdomain Discovery", workflowName: "Subdomain Discovery", description: "Employ multiple passive and active techniques to discover all possible subdomains, expanding the attack surface.", icon: "ph-tree-structure", tools: [ { name: "Subfinder", type: "cli", command: "subfinder -d [TARGET] -all -recursive -o- >> $RECON_DIR/subdomains/raw.txt", description: "Multi-source passive subdomain discovery", tags: ["Discovery", "Passive"], sourceUrl: "https://github.com/projectdiscovery/subfinder" }, { name: "Assetfinder", type: "cli", command: "assetfinder --subs-only [TARGET] >> $RECON_DIR/subdomains/raw.txt", description: "Fast subdomain and asset discovery", tags: ["Discovery", "Passive"], sourceUrl: "https://github.com/tomnomnom/assetfinder" }, { name: "Amass Enum", type: "cli", command: "amass enum -passive -d [TARGET] -config config.ini -o- >> $RECON_DIR/subdomains/raw.txt", description: "In-depth subdomain enumeration", tags: ["Discovery", "Active"], sourceUrl: "https://github.com/owasp-amass/amass" }, { name: "Findomain", type: "cli", command: "findomain -t [TARGET] -q >> $RECON_DIR/subdomains/raw.txt", description: "Cross-platform subdomain enumerator", tags: ["Discovery", "Passive"], sourceUrl: "https://github.com/findomain/findomain" }, { name: "crt.sh", type: "gui", url: "https://crt.sh/?q=%25.[TARGET]", description: "Certificate transparency logs", tags: ["Discovery", "Passive"], sourceUrl: "https://crt.sh" }, { name: "Chaos DB", type: "cli", command: "chaos -d [TARGET] -o- >> $RECON_DIR/subdomains/raw.txt", description: "ProjectDiscovery's subdomain dataset", tags: ["Discovery", "Passive"], sourceUrl: "https://github.com/projectdiscovery/chaos-client" } ] },
+        { phase: "03", title: "DNS Resolution & Live Service Detection", workflowName: "Live Host Probing", requires: ['02'], description: "Validate discovered subdomains and probe for active web services, filtering out dead hosts and identifying accessible endpoints.", icon: "ph-broadcast", tools: [ { name: "dnsx Resolution", type: "cli", command: "cat $RECON_DIR/subdomains/final.txt | dnsx -resp -silent -o $RECON_DIR/hosts/resolved.txt", description: "Fast DNS resolver", tags: ["Discovery", "Active"], sourceUrl: "https://github.com/projectdiscovery/dnsx" }, { name: "httpx Probe", type: "cli", command: "cat $RECON_DIR/subdomains/final.txt | httpx -title -tech-detect -status-code -probe -fr -o $RECON_DIR/hosts/live.txt", description: "Advanced HTTP toolkit for probing", tags: ["Web", "Active"], sourceUrl: "https://github.com/projectdiscovery/httpx" }, { name: "Httprobe", type: "cli", command: "cat $RECON_DIR/subdomains/final.txt | httprobe -c 50 > $RECON_DIR/hosts/live_alt.txt", description: "Simple HTTP/HTTPS prober", tags: ["Web", "Active"], sourceUrl: "https://github.com/tomnomnom/httprobe" } ] },
+        { phase: "04", title: "Visual Reconnaissance & Screenshot Analysis", workflowName: "Visual Recon", requires: ['03'], description: "Capture visual screenshots of live web applications to quickly identify interesting interfaces and visual anomalies.", icon: "ph-camera-plus", tools: [ { name: "Gowitness", type: "cli", command: "gowitness file -f $RECON_DIR/hosts/live.txt -P $RECON_DIR/screenshots --delay 3 --timeout 15", description: "Fast web screenshot utility", tags: ["Web"], sourceUrl: "https://github.com/sensepost/gowitness" }, { name: "Aquatone", type: "cli", command: "cat $RECON_DIR/hosts/live.txt | aquatone -out $RECON_DIR/aquatone", description: "Visual inspection with detailed reporting", tags: ["Web"], sourceUrl: "https://github.com/michenriksen/aquatone" } ] },
+        { phase: "05", title: "Network Scanning & Service Enumeration", workflowName: "Port Scanning", requires: ['03'], description: "Perform comprehensive port scans across all discovered hosts, identify running services, and map the network topology.", icon: "ph-radar", tools: [ { name: "Naabu Fast Scan", type: "cli", command: "naabu -list $RECON_DIR/hosts/live.txt -top-ports 1000 -silent -o $RECON_DIR/scans/naabu_ports.txt", description: "Ultra-fast port scanner", tags: ["Scanning"], sourceUrl: "https://github.com/projectdiscovery/naabu" }, { name: "Nmap Service Detection", type: "cli", command: "nmap -sV -sC -O --script=default,discovery,vuln -iL $RECON_DIR/hosts/live.txt -oA $RECON_DIR/scans/nmap/nmap_detailed", description: "Comprehensive service and vulnerability scanning", tags: ["Scanning", "Vulnerability"], sourceUrl: "https://nmap.org/" }, { name: "RustScan", type: "cli", command: "rustscan -a [TARGET] -r 1-65535 -- -A -sC", description: "Modern fast port scanner", tags: ["Scanning"], sourceUrl: "https://github.com/RustScan/RustScan" }, { name: "Shodan", type: "gui", url: "https://www.shodan.io/search?query=hostname:[TARGET]", description: "Internet device search engine", tags: ["OSINT", "Scanning"], sourceUrl: "https://shodan.io" } ] },
+        { phase: "06", title: "Web Crawling & URL Harvesting", workflowName: "URL Harvesting", requires: ['03'], description: "Systematically crawl discovered web applications and harvest URLs from multiple sources.", icon: "ph-spider", tools: [ { name: "Katana Crawler", type: "cli", command: "katana -list $RECON_DIR/hosts/live.txt -d 5 -jc -kf all -o- >> $RECON_DIR/urls/raw.txt", description: "Next-generation crawling framework", tags: ["Web", "Discovery"], sourceUrl: "https://github.com/projectdiscovery/katana" }, { name: "Gospider", type: "cli", command: "gospider -S $RECON_DIR/hosts/live.txt -c 10 -d 5 -t 20 -q -o- | grep -oE 'http.*' >> $RECON_DIR/urls/raw.txt", description: "Fast web spider with filtering", tags: ["Web", "Discovery"], sourceUrl: "https://github.com/jaeles-project/gospider" }, { name: "Waybackurls", type: "cli", command: "cat $RECON_DIR/hosts/live.txt | waybackurls >> $RECON_DIR/urls/raw.txt", description: "Wayback Machine URL fetcher", tags: ["OSINT", "Passive"], sourceUrl: "https://github.com/tomnomnom/waybackurls" }, { name: "Gau (Get All URLs)", type: "cli", command: "echo [TARGET] | gau --subs >> $RECON_DIR/urls/raw.txt", description: "Fetch URLs from multiple sources", tags: ["OSINT", "Passive"], sourceUrl: "https://github.com/lc/gau" } ] },
+        { phase: "07", title: "Content Discovery & Directory Fuzzing", workflowName: "Content Fuzzing", requires: ['03'], description: "Systematically discover hidden directories, files, and other concealed content using wordlist-based fuzzing techniques.", icon: "ph-folder-open", tools: [ { name: "ffuf Fuzzer", type: "cli", command: "ffuf -w /opt/SecLists/Discovery/Web-Content/common.txt -u https://[TARGET]/FUZZ -mc 200,301,302 -o $RECON_DIR/scans/ffuf_root.json", description: "Fast web fuzzer with smart filtering", tags: ["Fuzzing"], sourceUrl: "https://github.com/ffuf/ffuf" }, { name: "Gobuster Directory", type: "cli", command: "gobuster dir -u https://[TARGET] -w /opt/SecLists/Discovery/Web-Content/common.txt -o $RECON_DIR/scans/gobuster_root.txt", description: "Directory and file brute-forcer", tags: ["Fuzzing"], sourceUrl: "https://github.com/OJ/gobuster" } ] },
+        { phase: "08", title: "JavaScript Analysis & API Discovery", workflowName: "JS & API Analysis", requires: ['06'], description: "Extract sensitive information and discover hidden API endpoints from client-side JavaScript files.", icon: "ph-code", tools: [ { name: "subjs", type: "cli", command: "cat $RECON_DIR/urls/final.txt | grep -iE '\\\\.js($|\\\\?)' | subjs | anew $RECON_DIR/urls/js_files.txt", description: "JavaScript file extractor", tags: ["Web"], sourceUrl: "https://github.com/lc/subjs" }, { name: "LinkFinder", type: "cli", command: "cat $RECON_DIR/urls/js_files.txt | xargs -I % linkfinder -i % -o cli | anew $RECON_DIR/urls/linkfinder.txt", description: "Discover endpoints in JS files", tags: ["Web", "Discovery"], sourceUrl: "https://github.com/GerbenJavado/LinkFinder" }, { name: "SecretFinder", type: "cli", command: "cat $RECON_DIR/urls/js_files.txt | xargs -I % secretfinder -i % -o cli | anew $RECON_DIR/scans/secrets.txt", description: "Find secrets in JavaScript", tags: ["Secrets"], sourceUrl: "https://github.com/m4ll0k/SecretFinder" } ] },
+        { phase: "09", title: "Parameter Discovery & Fuzzing", workflowName: "Parameter Hunting", requires: ['06'], description: "Identify hidden parameters, analyze parameter behavior, and discover potential injection points.", icon: "ph-list-bullets", tools: [ { name: "ParamSpider", type: "cli", command: "paramspider -d [TARGET] --exclude woff,css,png,svg,jpg -q -o $RECON_DIR/urls/paramspider", description: "Parameter discovery from web archives", tags: ["Fuzzing", "Discovery"], sourceUrl: "https://github.com/devanshbatham/ParamSpider" }, { name: "Arjun", type: "cli", command: "arjun -u https://[TARGET]/ -oT $RECON_DIR/urls/arjun_root.txt", description: "HTTP parameter discovery suite", tags: ["Fuzzing"], sourceUrl: "https://github.com/s0md3v/Arjun" }, { name: "GF Patterns", type: "cli", command: "cat $RECON_DIR/urls/final.txt | gf xss | anew $RECON_DIR/urls/gf_xss.txt", description: "Pattern-based URL filtering", tags: ["Vulnerability"], sourceUrl: "https://github.com/tomnomnom/gf" } ] },
+        { phase: "10", title: "Cloud Asset & Storage Discovery", workflowName: "Cloud Discovery", description: "Enumerate cloud infrastructure including S3 buckets, Azure blobs, GCP storage, and other misconfigured services.", icon: "ph-cloud", tools: [ { name: "S3Scanner", type: "cli", command: "# Example: s3scanner -bucket-file buckets.txt -dump", description: "AWS S3 bucket scanner", tags: ["Cloud"], sourceUrl: "https://github.com/sa7mon/S3Scanner" }, { name: "Cloud_enum", type: "cli", command: "cloud_enum -k [TARGET] -l $RECON_DIR/scans/cloud_enum.txt", description: "Multi-cloud asset discovery", tags: ["Cloud"], sourceUrl: "https://github.com/initstring/cloud_enum" } ] },
+        { phase: "11", title: "Git Repository & Source Code Analysis", workflowName: "Source Code Secrets", description: "Search for exposed repositories, leaked credentials, API keys, and sensitive information in public code repositories.", icon: "ph-git-branch", tools: [ { name: "TruffleHog", type: "cli", command: "trufflehog github --org=[TARGET] --json > $RECON_DIR/scans/trufflehog.json", description: "Find secrets in git repositories", tags: ["Secrets", "OSINT"], sourceUrl: "https://github.com/trufflesecurity/trufflehog" }, { name: "GitLeaks", type: "cli", command: "gitleaks detect --source . -r $RECON_DIR/scans/gitleaks.json", description: "Detect secrets in git repos", tags: ["Secrets"], sourceUrl: "https://github.com/gitleaks/gitleaks" } ] },
+        { phase: "12", title: "Vulnerability Scanning & Template-Based Testing", workflowName: "Vulnerability Scanning", requires: ['03'], description: "Execute scans using template-based tools to find common security issues, misconfigurations, and known CVEs.", icon: "ph-shield-warning", tools: [ { name: "Nuclei Templates", type: "cli", command: "nuclei -l $RECON_DIR/hosts/live.txt -t ~/nuclei-templates/ -s critical,high,medium -o $RECON_DIR/scans/nuclei.txt", description: "Template-based vulnerability scanner", tags: ["Vulnerability", "Scanning"], sourceUrl: "https://github.com/projectdiscovery/nuclei" }, { name: "Nuclei CVE Scan", type: "cli", command: "nuclei -l $RECON_DIR/hosts/live.txt -t ~/nuclei-templates/cves/ -s critical,high -o $RECON_DIR/scans/nuclei_cves.txt", description: "CVE-specific vulnerability detection", tags: ["Vulnerability", "Scanning"], sourceUrl: "https://github.com/projectdiscovery/nuclei" }, { name: "testssl.sh", type: "cli", command: "testssl.sh --parallel --html --outdir $RECON_DIR/scans/testssl/ [TARGET]", description: "Comprehensive SSL/TLS tester", tags: ["Vulnerability", "Scanning"], sourceUrl: "https://github.com/drwetter/testssl.sh" } ] },
+        { phase: "13", title: "Specialized Vulnerability Hunting", workflowName: "Exploit Hunting", requires: ['09'], description: "Deploy specialized tools targeting specific vulnerability classes like XSS and SQLi.", icon: "ph-bug", tools: [ { name: "Dalfox XSS", type: "cli", command: "dalfox file $RECON_DIR/urls/gf_xss.txt --silence -o $RECON_DIR/scans/dalfox.txt", description: "Advanced XSS scanner and analyzer", tags: ["Vulnerability", "Web"], sourceUrl: "https://github.com/hahwul/dalfox" }, { name: "SQLMap", type: "cli", command: "sqlmap -m $RECON_DIR/urls/gf_sqli.txt --batch --level=5 --risk=3 --output-dir=$RECON_DIR/scans/sqlmap/ -v 1", description: "Automatic SQL injection tester", tags: ["Vulnerability", "Web"], sourceUrl: "http://sqlmap.org/" } ] },
+        { phase: "14", title: "CMS & Framework Security Assessment", workflowName: "CMS Scanning", requires: ['03'], description: "Identify and assess Content Management Systems for known vulnerabilities and misconfigurations.", icon: "ph-gear-six", tools: [ { name: "WPScan", type: "cli", command: "wpscan --url https://[TARGET] --enumerate ap,at,u -o $RECON_DIR/scans/wpscan.json -f json", description: "WordPress vulnerability scanner", tags: ["Vulnerability", "Web"], sourceUrl: "https://wpscan.com/" }, { name: "Nikto Web Scanner", type: "cli", command: "nikto -h https://[TARGET] -ssl -output $RECON_DIR/scans/nikto.txt", description: "Web server vulnerability scanner", tags: ["Web", "Vulnerability", "Scanning"], sourceUrl: "https://cirt.net/Nikto2" } ] },
+        { phase: "15", title: "Essential Resources & Wordlists", workflowName: "Resource Library", description: "Curated collection of essential wordlists and payloads for comprehensive security testing.", icon: "ph-books", isResource: true, tools: [ { name: "SecLists", type: "gui", url: "https://github.com/danielmiessler/SecLists", noTarget: true, description: "Security tester's companion wordlist collection", tags: ["Fuzzing"], sourceUrl: "https://github.com/danielmiessler/SecLists" }, { name: "PayloadsAllTheThings", type: "gui", url: "https://github.com/swisskyrepo/PayloadsAllTheThings", noTarget: true, description: "Web application security payload repository", tags: ["Vulnerability"], sourceUrl: "https://github.com/swisskyrepo/PayloadsAllTheThings" } ] }
     ];
 
     // --- SECTION: Utility Functions ---
@@ -136,7 +139,6 @@
         },
         updateAccordion: (itemToToggle) => {
             const isOpening = itemToToggle.button.getAttribute('aria-expanded') === 'false';
-            
             if (isOpening) {
                 itemToToggle.button.setAttribute('aria-expanded', 'true');
                 itemToToggle.content.style.maxHeight = `${itemToToggle.content.scrollHeight}px`;
@@ -166,7 +168,13 @@
                 </div>
                 <button class="copy-btn ${CSS_CLASSES.DISABLED_LINK} bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-medium py-2 px-3 rounded-md flex items-center gap-2 transition-colors active:scale-95 ml-2" aria-label="Copy ${tool.name} command"><i class="ph-bold ph-copy text-sm"></i><span>Copy</span></button>
             </div>
-            <div class="bg-black rounded-md p-3 ml-10"><code class="block text-[#00d4ff] text-sm font-mono leading-relaxed overflow-x-auto" data-command-template="${tool.command}">Set target to see command...</code></div>
+            <div class="bg-black rounded-md ml-10">
+                <input type="text"
+                    class="command-input w-full bg-transparent p-3 text-[#00d4ff] text-sm font-mono leading-relaxed border-0 focus:ring-0"
+                    data-command-template="${tool.command}"
+                    placeholder="Set target to see command..."
+                    disabled>
+            </div>
         </div>`;
 
     const createGuiToolHtml = (tool) => {
@@ -194,8 +202,19 @@
             const phaseCard = document.createElement('div');
             phaseCard.className = 'phase-card themed-container themed-container-hover rounded-xl transition-all duration-300 animate-fade-in';
             phaseCard.style.animationDelay = `${index * 0.05}s`;
+            phaseCard.dataset.phaseId = step.phase; // Add data attribute for filtering
+            
+            const allTags = step.tools.flatMap(tool => tool.tags || []).join(' ');
+            phaseCard.dataset.tags = allTags;
 
-            const toolsHtml = step.tools.map(tool => tool.type === 'gui' ? createGuiToolHtml(tool) : createCliToolHtml(tool, step)).join('');
+            const toolsHtml = step.tools.map(tool => {
+                const toolContainer = document.createElement('div');
+                toolContainer.innerHTML = tool.type === 'gui' ? createGuiToolHtml(tool) : createCliToolHtml(tool, step);
+                const firstChild = toolContainer.firstElementChild;
+                firstChild.dataset.tags = (tool.tags || []).join(' '); // Add tags to each tool container
+                return firstChild.outerHTML;
+            }).join('');
+            
 
             const checkboxHtml = step.isResource 
                 ? `<div class="flex items-center justify-center w-10 h-10 pt-1"><i class="ph-bold ph-books text-neutral-500 text-2xl"></i></div>`
@@ -236,120 +255,148 @@
     };
 
     // --- SECTION: Core Application Logic ---
-    function renderDependencies() {
-        const TOOL_INSTALL_COMMANDS = [
-            { name: 'amass', go: 'go install -v github.com/owasp-amass/amass/v4/...@master' },
-            { name: 'aquatone', go: 'go install github.com/michenriksen/aquatone@latest' },
-            { name: 'arjun', pip: 'pip3 install arjun' },
-            { name: 'assetfinder', go: 'go install github.com/tomnomnom/assetfinder@latest' },
-            { name: 'chaos', go: 'go install -v github.com/projectdiscovery/chaos-client/cmd/chaos@latest' },
-            { name: 'cloud_enum', pip: 'pip3 install cloud_enum' },
-            { name: 'cloudbrute', source: 'git clone https://github.com/0xsha/CloudBrute && cd CloudBrute && pip3 install -r requirements.txt' },
-            { name: 'cmsmap', source: 'git clone https://github.com/Dionach/CMSmap.git && cd CMSmap && pip3 install .'},
-            { name: 'commix', source: 'git clone https://github.com/commixproject/commix.git commix' },
-            { name: 'dalfox', go: 'go install -v github.com/hahwul/dalfox/v2@latest' },
-            { name: 'dig', apt: 'sudo apt install dnsutils', brew: 'brew install bind', notes: 'Usually pre-installed on Linux/macOS.' },
-            { name: 'dirsearch', source: 'git clone https://github.com/maurosoria/dirsearch.git && cd dirsearch && pip3 install -r requirements.txt' },
-            { name: 'dnsrecon', pip: 'pip3 install dnsrecon' },
-            { name: 'dnsx', go: 'go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@latest' },
-            { name: 'droopescan', pip: 'pip3 install droopescan' },
-            { name: 'feroxbuster', apt: 'sudo apt install feroxbuster', brew: 'brew install feroxbuster' },
-            { name: 'ffuf', go: 'go install github.com/ffuf/ffuf@latest' },
-            { name: 'findomain', source: 'https://github.com/findomain/findomain/releases', notes: 'Install from official releases.' },
-            { name: 'gau', go: 'go install github.com/lc/gau/v2/cmd/gau@latest' },
-            { name: 'gf', go: 'go install github.com/tomnomnom/gf@latest', notes: 'Also requires Gf-Patterns.' },
-            { name: 'gitleaks', apt: 'sudo apt install gitleaks', brew: 'brew install gitleaks' },
-            { name: 'gobuster', apt: 'sudo apt install gobuster', brew: 'brew install gobuster' },
-            { name: 'gospider', go: 'go install github.com/jaeles-project/gospider@latest' },
-            { name: 'gowitness', go: 'go install github.com/sensepost/gowitness@latest' },
-            { name: 'hakrawler', go: 'go install github.com/hakluke/hakrawler@latest' },
-            { name: 'httprobe', go: 'go install github.com/tomnomnom/httprobe@latest' },
-            { name: 'httpx', go: 'go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest' },
-            { name: 'joomscan', perl: 'cpan install JSON', source: 'git clone https://github.com/OWASP/joomscan.git' },
-            { name: 'katana', go: 'go install -v github.com/projectdiscovery/katana/cmd/katana@latest' },
-            { name: 'kiterunner', source: 'https://github.com/assetnote/kiterunner/releases', notes: 'Install from official releases.' },
-            { name: 'linkfinder', source: 'git clone https://github.com/GerbenJavado/LinkFinder.git && cd LinkFinder && pip3 install -r requirements.txt' },
-            { name: 'masscan', apt: 'sudo apt install masscan', brew: 'brew install masscan' },
-            { name: 'naabu', go: 'go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest' },
-            { name: 'nikto', apt: 'sudo apt install nikto', brew: 'brew install nikto' },
-            { name: 'nmap', apt: 'sudo apt install nmap', brew: 'brew install nmap' },
-            { name: 'nuclei', go: 'go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest' },
-            { name: 'paramspider', source: 'git clone https://github.com/devanshbatham/ParamSpider && cd ParamSpider && pip3 install -r requirements.txt' },
-            { name: 'puredns', go: 'go install -v github.com/d3mondev/puredns/v2@latest' },
-            { name: 'rustscan', brew: 'brew install rustscan', source: 'https://github.com/RustScan/RustScan/releases', notes: 'Install from releases or Docker.' },
-            { name: 's3scanner', pip: 'pip3 install s3scanner' },
-            { name: 'secretfinder', pip: 'pip3 install secretfinder' },
-            { name: 'sqlmap', apt: 'sudo apt install sqlmap', brew: 'brew install sqlmap' },
-            { name: 'ssrfmap', source: 'git clone https://github.com/swisskyrepo/SSRFmap && cd SSRFmap && pip3 install -r requirements.txt' },
-            { name: 'subfinder', go: 'go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest' },
+    function renderTagFilters() {
+        const allTags = new Set(reconSteps.flatMap(step => step.tools.flatMap(tool => tool.tags || [])));
+        const sortedTags = Array.from(allTags).sort();
+
+        const tagsHtml = sortedTags.map(tag =>
+            `<button class="tag-filter-btn text-xs font-medium py-1.5 px-3 rounded-md transition-colors active:scale-95" data-tag="${tag}">${tag}</button>`
+        ).join('');
+        elements.tagFilterContainer.innerHTML = tagsHtml;
+    }
+
+    const TOOL_INSTALL_COMMANDS = [
+            { name: 'Amass Enum', go: 'go install -v github.com/owasp-amass/amass/v4/...@master' },
+            { name: 'Aquatone', go: 'go install github.com/michenriksen/aquatone@latest' },
+            { name: 'Arjun', pip: 'pip3 install arjun' },
+            { name: 'Assetfinder', go: 'go install github.com/tomnomnom/assetfinder@latest' },
+            { name: 'Chaos DB', go: 'go install -v github.com/projectdiscovery/chaos-client/cmd/chaos@latest' },
+            { name: 'Cloud_enum', pip: 'pip3 install cloud_enum' },
+            { name: 'Dalfox XSS', go: 'go install -v github.com/hahwul/dalfox/v2@latest' },
+            { name: 'Dig DNS Records', apt: 'sudo apt-get install -y dnsutils', brew: 'brew install bind', notes: 'Usually pre-installed.' },
+            { name: 'DNSRecon', pip: 'pip3 install dnsrecon' },
+            { name: 'dnsx Resolution', go: 'go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@latest' },
+            { name: 'ffuf Fuzzer', go: 'go install github.com/ffuf/ffuf/v2@latest' },
+            { name: 'Findomain', source: 'Visit https://github.com/findomain/findomain/releases' },
+            { name: 'Gau (Get All URLs)', go: 'go install github.com/lc/gau/v2/cmd/gau@latest' },
+            { name: 'GF Patterns', go: 'go install github.com/tomnomnom/gf@latest' },
+            { name: 'GitLeaks', brew: 'brew install gitleaks', source: 'curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/install.sh | sh -s -- -b /usr/local/bin' },
+            { name: 'Gobuster Directory', apt: 'sudo apt-get install -y gobuster', brew: 'brew install gobuster' },
+            { name: 'Gospider', go: 'go install github.com/jaeles-project/gospider@latest' },
+            { name: 'Gowitness', go: 'go install github.com/sensepost/gowitness@latest' },
+            { name: 'Httprobe', go: 'go install github.com/tomnomnom/httprobe@latest' },
+            { name: 'httpx Probe', go: 'go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest' },
+            { name: 'Katana Crawler', go: 'go install -v github.com/projectdiscovery/katana/cmd/katana@latest' },
+            { name: 'LinkFinder', source: 'git clone https://github.com/GerbenJavado/LinkFinder.git && cd LinkFinder && pip3 install -r requirements.txt && python3 setup.py install'},
+            { name: 'Naabu Fast Scan', go: 'go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest' },
+            { name: 'Nikto Web Scanner', apt: 'sudo apt-get install -y nikto', brew: 'brew install nikto' },
+            { name: 'Nmap Service Detection', apt: 'sudo apt-get install -y nmap', brew: 'brew install nmap' },
+            { name: 'Nuclei Templates', go: 'go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest' },
+            { name: 'Nuclei CVE Scan', go: 'go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest' },
+            { name: 'ParamSpider', source: 'git clone https://github.com/devanshbatham/ParamSpider && cd ParamSpider && pip3 install .'},
+            { name: 'RustScan', brew: 'brew install rustscan', source: 'Visit https://github.com/RustScan/RustScan/releases' },
+            { name: 'S3Scanner', pip: 'pip3 install s3scanner' },
+            { name: 'SecretFinder', pip: 'pip3 install secretfinder' },
+            { name: 'SQLMap', apt: 'sudo apt-get install -y sqlmap', brew: 'brew install sqlmap' },
+            { name: 'Subfinder', go: 'go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest' },
             { name: 'subjs', go: 'go install github.com/lc/subjs@latest' },
             { name: 'testssl.sh', source: 'git clone --depth 1 https://github.com/drwetter/testssl.sh.git' },
-            { name: 'trufflehog', source: 'curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh' },
-            { name: 'waybackurls', go: 'go install github.com/tomnomnom/waybackurls@latest' },
-            { name: 'whois', apt: 'sudo apt install whois', brew: 'brew install whois' },
-            { name: 'wpscan', gem: 'gem install wpscan', notes: 'Requires Ruby.' },
-            { name: 'x8', go: 'go install github.com/Sh1Yo/x8/v2@latest' }
-        ].sort((a, b) => a.name.localeCompare(b.name));
-
-        const platform = navigator.platform.toLowerCase();
-        let recommendedManager = null;
-        if (platform.includes('mac') || platform.includes('iphone')) {
-            recommendedManager = 'brew';
-        } else if (platform.includes('linux')) {
-            recommendedManager = 'apt';
+            { name: 'TruffleHog', source: 'curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh' },
+            { name: 'Waybackurls', go: 'go install github.com/tomnomnom/waybackurls@latest' },
+            { name: 'WHOIS Lookup', apt: 'sudo apt-get install -y whois', brew: 'brew install whois' },
+            { name: 'WPScan', gem: 'gem install wpscan', notes: 'Requires Ruby.' },
+    ].sort((a, b) => a.name.localeCompare(b.name));
+    
+    function generateInstallerScript() {
+        const selectedToolNames = new Set(Array.from(document.querySelectorAll('.tool-checkbox:checked')).map(cb => cb.dataset.toolName));
+        if (selectedToolNames.size === 0) {
+            ui.showStatusMessage('Select at least one tool to generate an installer script', 'warning');
+            elements.depsList.innerHTML = `<p class="text-neutral-400 font-mono">Select tools and click "Generate Installer" to create a dependency installation script.</p>`;
+            elements.copyDepsBtn.classList.add('hidden');
+            return;
         }
 
-        const getButtonHtml = (manager, command, toolName) => {
-            if (!command) return '';
-            const isRecommended = manager === recommendedManager;
-            const managerLabel = manager.charAt(0).toUpperCase() + manager.slice(1);
-            return `<button class="dep-command-btn ${isRecommended ? 'is-recommended' : ''}" data-command="${command.replace(/"/g, '&quot;')}" title="Copy install command for ${toolName}">
-                        <i class="ph-bold ph-copy text-xs"></i>
-                        <span>${managerLabel}</span>
-                    </button>`;
+        const requiredTools = TOOL_INSTALL_COMMANDS.filter(tool => selectedToolNames.has(tool.name));
+        
+        const installers = { apt: [], brew: [], go: [], pip: [], gem: [], source: [] };
+
+        requiredTools.forEach(tool => {
+            if (tool.apt) installers.apt.push(tool.apt);
+            if (tool.brew) installers.brew.push(tool.brew);
+            if (tool.go) installers.go.push(tool.go);
+            if (tool.pip) installers.pip.push(tool.pip);
+            if (tool.gem) installers.gem.push(tool.gem);
+            if (tool.source) installers.source.push(tool.source);
+        });
+
+        let script = `#!/bin/bash
+# --- BountyScope Dependency Installer Script ---
+# Generated: ${new Date().toISOString()}
+# This script will attempt to install dependencies for the selected tools.
+# Run with caution. Review the commands before executing. Some steps may require manual intervention.
+set -e
+
+# --- Helper function ---
+command_exists() {
+    command -v "$1" &> /dev/null
+}
+
+echo "--- Starting Dependency Installation ---"
+
+`;
+        const addSection = (title, commands, check) => {
+            if (commands.length === 0) return;
+            script += `\n# --- ${title} ---\n`;
+            if (check) {
+                script += `if command_exists ${check}; then\n    echo ">>> Installing ${title}..."\n`;
+                commands.forEach(cmd => { script += `    ${cmd}\n`; });
+                script += `else\n    echo "[WARNING] ${check} is not installed. Skipping ${title}."\nfi\n`;
+            } else {
+                 commands.forEach(cmd => { script += `${cmd}\n`; });
+            }
         };
 
-        const depsHtml = TOOL_INSTALL_COMMANDS.map(tool => {
-            const buttons = [
-                getButtonHtml('apt', tool.apt, tool.name),
-                getButtonHtml('brew', tool.brew, tool.name),
-                getButtonHtml('go', tool.go, tool.name),
-                getButtonHtml('pip', tool.pip, tool.name),
-                getButtonHtml('gem', tool.gem, tool.name),
-                getButtonHtml('perl', tool.perl, tool.name),
-                getButtonHtml('source', tool.source, tool.name),
-            ].filter(Boolean).join('');
-            
-            const notesHtml = tool.notes ? `<p class="dep-notes">Note: ${tool.notes}</p>` : '';
+        addSection('Go Tools', installers.go, 'go');
+        addSection('Python (Pip) Packages', installers.pip, 'pip3');
+        addSection('System Packages (Debian/Ubuntu)', installers.apt, 'apt-get');
+        addSection('System Packages (macOS/Homebrew)', installers.brew, 'brew');
+        addSection('Ruby (Gem) Packages', installers.gem, 'gem');
 
-            return `
-                <div class="dep-card">
-                    <div class="dep-card-header">
-                        <h4 class="dep-card-title">${tool.name}</h4>
-                    </div>
-                    <div class="dep-commands">
-                        ${buttons}
-                    </div>
-                    ${notesHtml}
-                </div>`;
-        }).join('');
+        if (installers.source.length > 0) {
+            script += `
+# --- Manual/Source Installation ---
+echo "[INFO] The following tools require manual installation. The commands are provided for reference:"
+`;
+            installers.source.forEach(cmd => {
+                script += `# --- For ${requiredTools.find(t=>t.source === cmd).name} ---\n# ${cmd}\n\n`;
+            });
+        }
+
+
+        script += '\necho "--- Installation script finished ---"';
         
-        elements.depsList.className = 'deps-grid'; // Use grid layout
-        elements.depsList.innerHTML = depsHtml || '<p class="text-neutral-400">Could not load dependency installation commands.</p>';
-        // Hide the generic "Copy List" button for the new UI
-        elements.copyDepsBtn.style.display = 'none';
+        generatedInstallerContent = script;
+        elements.depsList.innerHTML = `<pre class="font-mono text-sm text-[#00d4ff] leading-relaxed"><code>${script}</code></pre>`;
+        elements.copyDepsBtn.classList.remove('hidden');
+        ui.showStatusMessage('Installer script generated successfully!');
     }
-    
+
+
     function updateToolsUI() {
         const isTargetSet = !!targetDomain;
         document.querySelectorAll(`a.recon-link`).forEach(link => {
             link.classList.toggle(CSS_CLASSES.DISABLED_LINK, !isTargetSet);
             link.href = isTargetSet ? link.dataset.urlTemplate.replace(/\[TARGET\]/g, encodeURIComponent(targetDomain)) : "#";
         });
-        document.querySelectorAll('code[data-command-template]').forEach(code => {
-            const copyButton = code.closest('.group').querySelector('.copy-btn');
+        document.querySelectorAll('input.command-input').forEach(input => {
+            ui.toggleDisabled(input, !isTargetSet);
+            const copyButton = input.closest('.group').querySelector('.copy-btn');
             copyButton.classList.toggle(CSS_CLASSES.DISABLED_LINK, !isTargetSet);
-            code.textContent = isTargetSet ? code.dataset.commandTemplate.replace(/\[TARGET\]/g, targetDomain) : 'Set target to see command...';
+            if(isTargetSet) {
+                 input.value = input.dataset.commandTemplate.replace(/\[TARGET\]/g, targetDomain);
+            } else {
+                input.value = '';
+            }
         });
         document.querySelectorAll('.phase-checkbox').forEach(checkbox => {
              ui.toggleDisabled(checkbox, !isTargetSet);
@@ -357,7 +404,8 @@
         const controlButtons = [
             elements.generateScriptBtn, elements.viewDepsBtn, elements.selectAllBtn,
             elements.deselectAllBtn, elements.loadPassiveScanBtn, elements.loadQuickScanBtn,
-            elements.loadDeepScanBtn, elements.loadWebVulnScanBtn, elements.loadFullScanBtn
+            elements.loadDeepScanBtn, elements.loadWebVulnScanBtn, elements.loadFullScanBtn,
+            elements.generateInstallerBtn
         ];
         controlButtons.forEach(btn => ui.toggleDisabled(btn, !isTargetSet));
     }
@@ -391,58 +439,50 @@
         elements.workflowMapContainer.classList.toggle('hidden', !isVisible);
     }
     
-    function handleSearch() {
+    function updateGridVisibility() {
         const searchTerm = elements.searchInput.value.toLowerCase().trim();
+        const activeTags = Array.from(document.querySelectorAll('.tag-filter-btn.active')).map(btn => btn.dataset.tag);
+        
         ui.toggleVisibility(elements.clearSearchBtn, searchTerm.length > 0);
+        document.querySelectorAll('.tool-highlight').forEach(el => el.classList.remove('tool-highlight'));
 
-        const allToolContainers = document.querySelectorAll('.tool-container');
-        allToolContainers.forEach(el => el.classList.remove('tool-highlight'));
-
-        const phaseCards = document.querySelectorAll('.phase-card');
         let visibleCount = 0;
-
-        phaseCards.forEach((card, index) => {
+        
+        document.querySelectorAll('.phase-card').forEach((card, index) => {
             const stepData = reconSteps[index];
-            let isPhaseVisible = false;
+            let phaseMatchesSearch = !searchTerm || stepData.title.toLowerCase().includes(searchTerm) || stepData.description.toLowerCase().includes(searchTerm);
+            let hasVisibleTools = false;
 
-            if (!searchTerm) {
-                isPhaseVisible = true;
-            } else {
-                const phaseTitleMatch = stepData.title.toLowerCase().includes(searchTerm);
-                const phaseDescMatch = stepData.description.toLowerCase().includes(searchTerm);
+            card.querySelectorAll('.tool-container').forEach((toolEl, toolIndex) => {
+                const toolData = stepData.tools[toolIndex];
+                const toolTags = toolData.tags || [];
 
-                if (phaseTitleMatch || phaseDescMatch) {
-                    isPhaseVisible = true;
-                }
+                const matchesTags = activeTags.length === 0 || activeTags.some(t => toolTags.includes(t));
+                const matchesSearch = !searchTerm || toolData.name.toLowerCase().includes(searchTerm) || toolData.description.toLowerCase().includes(searchTerm);
 
-                const toolElements = card.querySelectorAll('.tool-container');
-                stepData.tools.forEach((tool, toolIndex) => {
-                    const toolNameMatch = tool.name.toLowerCase().includes(searchTerm);
-                    const toolDescMatch = tool.description.toLowerCase().includes(searchTerm);
-
-                    if (toolNameMatch || toolDescMatch) {
-                        isPhaseVisible = true;
-                        const toolEl = toolElements[toolIndex];
-                        if (toolEl) {
-                            toolEl.classList.add('tool-highlight');
-                        }
+                if (matchesTags && matchesSearch) {
+                    toolEl.style.display = '';
+                    hasVisibleTools = true;
+                    if (searchTerm) {
+                        toolEl.classList.add('tool-highlight');
                     }
-                });
-            }
+                } else {
+                    toolEl.style.display = 'none';
+                }
+            });
             
+            const isPhaseVisible = hasVisibleTools || (phaseMatchesSearch && activeTags.length === 0);
             card.style.display = isPhaseVisible ? '' : 'none';
-            if (isPhaseVisible) {
-                visibleCount++;
-            }
+            if (isPhaseVisible) visibleCount++;
         });
         
         elements.noResultsMessage.classList.toggle('hidden', visibleCount > 0);
     }
 
+
     function updateDependencyWarnings() {
         const activePhaseIds = new Set(
-            Array.from(document.querySelectorAll('.tool-checkbox:checked'))
-                 .map(cb => cb.dataset.phaseId)
+            Array.from(document.querySelectorAll('.tool-checkbox:checked')).map(cb => cb.dataset.phaseId)
         );
 
         reconSteps.forEach(step => {
@@ -465,42 +505,6 @@
             }
         });
     }
-    
-    const TOOL_SCRIPTS = {
-        'WHOIS Lookup': c => `\tlog_sub_info "Performing WHOIS Lookup..."\n\twhois $TARGET > "${c.INFO_DIR}/whois.txt" 2>/dev/null || log_warn "WHOIS lookup failed for $TARGET."`,
-        'Dig DNS Records': c => `\tlog_sub_info "Querying all DNS records with Dig..."\n\tdig +nocmd $TARGET ANY +multiline +noall +answer > "${c.INFO_DIR}/dns_records.txt"`,
-        'DNSRecon': c => `\tlog_sub_info "Running DNSRecon..."\n\tdnsrecon -d $TARGET -t std > "${c.INFO_DIR}/dnsrecon.txt" 2>/dev/null || log_warn "DNSRecon scan failed."`,
-        'Subfinder': c => `\tlog_sub_info "Running Subfinder..."\n\tsubfinder -d "$TARGET" -all -silent -o- >> ${c.SUBDOMAINS_RAW}`,
-        'Assetfinder': c => `\tlog_sub_info "Running Assetfinder..."\n\tassetfinder --subs-only "$TARGET" >> ${c.SUBDOMAINS_RAW}`,
-        'Amass Enum': c => `\tlog_sub_info "Running Amass Enum (passive)..."\n\tamass enum -passive -d "$TARGET" -silent -o- >> ${c.SUBDOMAINS_RAW}`,
-        'Findomain': c => `\tlog_sub_info "Running Findomain..."\n\tfindomain -t $TARGET -q >> ${c.SUBDOMAINS_RAW}`,
-        'Chaos DB': c => `\tlog_sub_info "Running Chaos Client..."\n\tchaos -d $TARGET -silent >> ${c.SUBDOMAINS_RAW}`,
-        'dnsx Resolution': c => `\tlog_sub_info "Resolving subdomains with dnsx..."\n\tcat ${c.SUBDOMAINS_FINAL} | dnsx -resp -silent -o ${c.RESOLVED_HOSTS}`,
-        'httpx Probe': c => `\tlog_sub_info "Probing for live web servers with httpx..."\n\tcat ${c.SUBDOMAINS_FINAL} | httpx -silent -threads 100 -o ${c.LIVE_HOSTS}`,
-        'Httprobe': c => `\tlog_sub_info "Probing for live web servers with httprobe..."\n\tcat ${c.SUBDOMAINS_FINAL} | httprobe -c 50 > ${c.LIVE_HOSTS_ALT}`,
-        'Gowitness': c => `\tlog_sub_info "Taking screenshots with Gowitness..."\n\tgowitness file -f ${c.LIVE_HOSTS} -P ${c.SCREENSHOTS_DIR} --disable-db --timeout 15`,
-        'Aquatone': c => `\tlog_sub_info "Generating report with Aquatone..."\n\tcat ${c.LIVE_HOSTS} | aquatone -out "${c.RECON_DIR}/aquatone"`,
-        'Naabu Fast Scan': c => `\tlog_sub_info "Running Naabu for fast port scan (Top 1000)..."\n\tnaabu -list ${c.LIVE_HOSTS} -top-ports 1000 -silent -o ${c.NAABU_RESULTS}`,
-        'Nmap Service Detection': c => `\tlog_sub_info "Running Nmap for detailed service detection..."\n\tnmap -iL ${c.LIVE_HOSTS} -sV -sC -A -T4 -oA "${c.NMAP_DIR}/nmap_scan"`,
-        'Katana Crawler': c => `\tlog_sub_info "Crawling hosts with Katana..."\n\tcat ${c.LIVE_HOSTS} | katana -silent -d 3 -jc -kf -o- >> ${c.URLS_RAW}`,
-        'Waybackurls': c => `\tlog_sub_info "Fetching URLs from Wayback Machine..."\n\tcat ${c.LIVE_HOSTS} | waybackurls >> ${c.URLS_RAW}`,
-        'Gospider': c => `\tlog_sub_info "Crawling hosts with Gospider..."\n\tgospider -S ${c.LIVE_HOSTS} -c 10 -d 3 -q -o- | grep -E '^\\[(gospider|url)\\]' | cut -d ' ' -f 3 >> ${c.URLS_RAW}`,
-        'Gau (Get All URLs)': c => `\tlog_sub_info "Fetching URLs with Gau..."\n\techo $TARGET | gau --subs >> ${c.URLS_RAW}`,
-        'ffuf Fuzzer': c => `\tlog_sub_info "Fuzzing root domain with ffuf..."\n\tffuf -w /usr/share/seclists/Discovery/Web-Content/common.txt -u https://$TARGET/FUZZ -mc 200,301,302 -o "${c.SCANS_DIR}/ffuf_root.json"`,
-        'Gobuster Directory': c => `\tlog_sub_info "Brute-forcing directories on root with Gobuster..."\n\tgobuster dir -u https://$TARGET -w /usr/share/seclists/Discovery/Web-Content/common.txt -t 50 -o "${c.SCANS_DIR}/gobuster_root.txt"`,
-        'subjs': c => `\tlog_sub_info "Extracting JavaScript files with subjs..."\n\tcat ${c.URLS_FINAL} | grep -iE '\\.js($|\\?)' | subjs | anew "${c.URLS_DIR}/js_files.txt"`,
-        'LinkFinder': c => `\tlog_sub_info "Finding endpoints in JS files with LinkFinder..."\n\tcat "${c.URLS_DIR}/js_files.txt" | while read url; do linkfinder -i "$url" -o cli; done | anew "${c.URLS_DIR}/linkfinder.txt"`,
-        'SecretFinder': c => `\tlog_sub_info "Finding secrets in JS with SecretFinder..."\n\tcat "${c.URLS_DIR}/js_files.txt" | while read url; do secretfinder -i "$url" -o cli; done | anew "${c.URLS_DIR}/secrets.txt"`,
-        'ParamSpider': c => `\tlog_sub_info "Discovering parameters with ParamSpider..."\n\tparamspider -d $TARGET --exclude woff,css,png,svg,jpg -q -o "${c.URLS_DIR}/paramspider.txt"`,
-        'Arjun': c => `\tlog_sub_info "Discovering parameters on root with Arjun..."\n\tarjun -u "https://$TARGET/" -oT "${c.URLS_DIR}/arjun_root.txt"`,
-        'GF Patterns': c => `\tlog_sub_info "Filtering URLs with GF patterns..."\n\tcat ${c.URLS_FINAL} | gf xss | anew "${c.URLS_DIR}/gf_xss.txt"\n\tcat ${c.URLS_FINAL} | gf sqli | anew "${c.URLS_DIR}/gf_sqli.txt"\n\tcat ${c.URLS_FINAL} | gf ssrf | anew "${c.URLS_DIR}/gf_ssrf.txt"`,
-        'Nuclei Templates': c => `\tlog_sub_info "Running Nuclei with default templates..."\n\tnuclei -l ${c.LIVE_HOSTS} -t /opt/nuclei-templates/ -severity critical,high,medium -o ${c.NUCLEI_RESULTS}`,
-        'Nuclei CVE Scan': c => `\tlog_sub_info "Running Nuclei CVE scan..."\n\tnuclei -l ${c.LIVE_HOSTS} -t /opt/nuclei-templates/cves/ -severity critical,high -o ${c.NUCLEI_CVE_RESULTS}`,
-        'Dalfox XSS': c => `\tlog_sub_info "Scanning for XSS with Dalfox (requires gf_xss.txt file)..."\n\tif [ -s "${c.URLS_DIR}/gf_xss.txt" ]; then dalfox file "${c.URLS_DIR}/gf_xss.txt" -o "${c.SCANS_DIR}/dalfox.txt"; else log_warn "XSS candidates file not found, skipping Dalfox."; fi`,
-        'SQLMap': c => `\tlog_sub_info "Scanning for SQLi with SQLMap (requires gf_sqli.txt file)..."\n\tif [ -s "${c.URLS_DIR}/gf_sqli.txt" ]; then sqlmap -m "${c.URLS_DIR}/gf_sqli.txt" --batch --random-agent --output-dir="${c.SCANS_DIR}/sqlmap" -dbs; else log_warn "SQLi candidates file not found, skipping SQLMap."; fi`,
-        'WPScan': c => `\tlog_sub_info "Scanning root domain with WPScan..."\n\twpscan --url https://$TARGET --enumerate ap,at,dbe --random-user-agent --output "${c.SCANS_DIR}/wpscan.txt"`,
-        'Nikto Web Scanner': c => `\tlog_sub_info "Scanning root domain with Nikto..."\n\tnikto -h https://$TARGET -o "${c.SCANS_DIR}/nikto_root.txt"`,
-    };
 
     function generateScript() {
         if (!targetDomain) return ui.showStatusMessage('Please set a target domain first', 'error');
@@ -513,8 +517,11 @@
         const selectedToolsByPhase = selectedToolCheckboxes.reduce((acc, cb) => {
             const phaseId = cb.dataset.phaseId;
             const toolName = cb.dataset.toolName;
+            const commandInput = cb.closest('.tool-container').querySelector('.command-input');
+            const command = commandInput ? commandInput.value : '';
+
             if (!acc[phaseId]) acc[phaseId] = [];
-            acc[phaseId].push(toolName);
+            acc[phaseId].push({ name: toolName, command: command });
             return acc;
         }, {});
 
@@ -533,26 +540,16 @@
                 }
             }
         }
-
-        const SCRIPT_CONFIG = {
-            TARGET: targetDomain, RECON_DIR: `"$TARGET/recon"`,
-            INFO_DIR: `"$RECON_DIR/info"`, URLS_DIR: `"$RECON_DIR/urls"`, SCANS_DIR: `"$RECON_DIR/scans"`,
-            SUBDOMAINS_RAW: `"$RECON_DIR/subdomains/raw.txt"`, SUBDOMAINS_FINAL: `"$RECON_DIR/subdomains/final.txt"`,
-            LIVE_HOSTS: `"$RECON_DIR/hosts/live.txt"`, LIVE_HOSTS_ALT: `"$RECON_DIR/hosts/live_alt.txt"`, RESOLVED_HOSTS: `"$RECON_DIR/hosts/resolved.txt"`,
-            URLS_RAW: `"$RECON_DIR/urls/raw.txt"`, URLS_FINAL: `"$RECON_DIR/urls/final.txt"`,
-            SCREENSHOTS_DIR: `"$RECON_DIR/screenshots/"`,
-            NMAP_DIR: `"$RECON_DIR/scans/nmap"`, NAABU_RESULTS: `"$RECON_DIR/scans/naabu_ports.txt"`, 
-            NUCLEI_RESULTS: `"$RECON_DIR/scans/nuclei.txt"`, NUCLEI_CVE_RESULTS: `"$RECON_DIR/scans/nuclei_cves.txt"`
-        };
-
+       
         let functionDefinitions = '';
         let functionCalls = '';
+        const selectedToolNames = [];
 
         sortedPhaseIds.forEach(phaseId => {
             const step = reconSteps.find(s => s.phase === phaseId);
             if (!step) return;
 
-            const functionName = `run_phase_${phaseId}`;
+            const functionName = `run_phase_${phaseId}_${step.workflowName.replace(/\s/g, '_').toLowerCase()}`;
             functionCalls += `    ${functionName}\n`;
             
             functionDefinitions += `\n# --- Phase ${phaseId}: ${step.title} ---\n`;
@@ -560,27 +557,22 @@
             functionDefinitions += `\tlog_info "Phase ${phaseId}: Running ${step.workflowName}..."\n`;
 
             const toolsInPhase = selectedToolsByPhase[phaseId];
-            toolsInPhase.forEach(toolName => {
-                if (TOOL_SCRIPTS[toolName]) {
-                    functionDefinitions += TOOL_SCRIPTS[toolName](SCRIPT_CONFIG) + '\n';
-                } else {
-                    functionDefinitions += `\tlog_warn "Script generation for tool '${toolName}' is not implemented."\n`;
-                }
+            toolsInPhase.forEach(tool => {
+                selectedToolNames.push(tool.name);
+                functionDefinitions += `\tlog_sub_info "Running ${tool.name}..."\n\t${tool.command}\n`;
             });
 
-            // Add aggregation logic for specific phases
             if (phaseId === '02') {
-                functionDefinitions += `\tlog_sub_info "Combining and sorting unique subdomains..."\n\tsort -u ${SCRIPT_CONFIG.SUBDOMAINS_RAW} > ${SCRIPT_CONFIG.SUBDOMAINS_FINAL}\n\trm ${SCRIPT_CONFIG.SUBDOMAINS_RAW} 2>/dev/null\n\tlog_sub_info "Found $(wc -l < ${SCRIPT_CONFIG.SUBDOMAINS_FINAL}) unique subdomains."\n`;
+                functionDefinitions += `\tlog_sub_info "Combining and sorting unique subdomains..."\n\tsort -u $RECON_DIR/subdomains/raw.txt > $RECON_DIR/subdomains/final.txt\n\trm $RECON_DIR/subdomains/raw.txt 2>/dev/null\n\tlog_sub_info "Found $(wc -l < $RECON_DIR/subdomains/final.txt) unique subdomains."\n`;
             }
             if (phaseId === '06') {
-                 functionDefinitions += `\tlog_sub_info "Combining and sorting unique URLs..."\n\tsort -u ${SCRIPT_CONFIG.URLS_RAW} > ${SCRIPT_CONFIG.URLS_FINAL}\n\trm ${SCRIPT_CONFIG.URLS_RAW} 2>/dev/null\n\tlog_sub_info "Found $(wc -l < ${SCRIPT_CONFIG.URLS_FINAL}) unique URLs."\n`;
+                 functionDefinitions += `\tlog_sub_info "Combining and sorting unique URLs..."\n\tsort -u $RECON_DIR/urls/raw.txt > $RECON_DIR/urls/final.txt\n\trm $RECON_DIR/urls/raw.txt 2>/dev/null\n\tlog_sub_info "Found $(wc -l < $RECON_DIR/urls/final.txt) unique URLs."\n`;
             }
             functionDefinitions += `}\n`;
         });
 
-        const dirList = "info subdomains hosts urls scans screenshots scans/nmap";
-        const selectedToolNames = selectedToolCheckboxes.map(cb => cb.dataset.toolName);
-
+        const dirList = "info subdomains hosts urls scans screenshots scans/nmap scans/sqlmap scans/testssl";
+        
         generatedScriptContent = `#!/bin/bash
 # --- BountyScope Automation Script ---
 # Target: ${targetDomain}
@@ -602,12 +594,9 @@ log_sub_info() { echo -e "  [i] \\e[0;34m$1\\e[0m"; }
 log_warn() { echo -e "  [!] \\e[1;33m$1\\e[0m"; }
 
 # --- Phase Functions ---
-# Each step of the recon process is encapsulated in a function.
-# You can easily skip a phase by commenting out its call in the main() function.
 ${functionDefinitions}
 
 # --- Main Execution ---
-# The main function orchestrates the entire workflow.
 main() {
     log_info "Starting reconnaissance workflow for: $TARGET"
     
@@ -620,7 +609,6 @@ ${functionCalls}
     echo -e "[+] All results are stored in the '$TARGET/' directory."
 }
 
-# Run the main function
 main "$@"
 `;
         
@@ -657,7 +645,8 @@ main "$@"
         ui.toggleDisabled(elements.downloadScriptBtn, true);
 
         elements.searchInput.value = '';
-        handleSearch();
+        document.querySelectorAll('.tag-filter-btn.active').forEach(btn => btn.classList.remove('active'));
+        updateGridVisibility();
 
         toggleAllAccordions(false);
         
@@ -678,16 +667,18 @@ main "$@"
         });
     }
     
-    function loadPreset(toolNames, presetName) {
+    function loadPreset(phaseIds, presetName) {
         if (!targetDomain) {
             ui.showStatusMessage('Set a target before loading a workflow', 'warning');
             return;
         }
         document.querySelectorAll('.tool-checkbox:not(:disabled)').forEach(cb => cb.checked = false);
         
-        toolNames.forEach(name => {
-            const checkbox = document.querySelector(`.tool-checkbox[data-tool-name="${name}"]`);
-            if (checkbox) checkbox.checked = true;
+        phaseIds.forEach(phaseId => {
+            const toolCheckboxes = document.querySelectorAll(`.tool-checkbox[data-phase-id="${phaseId}"]`);
+            toolCheckboxes.forEach(checkbox => {
+                 if(checkbox) checkbox.checked = true;
+            });
         });
         
         document.querySelectorAll('.phase-card').forEach(card => updatePhaseCheckboxState(card));
@@ -731,11 +722,10 @@ main "$@"
             }
             const copyButton = e.target.closest('.copy-btn');
             if (copyButton && !copyButton.classList.contains(CSS_CLASSES.DISABLED_LINK)) {
-                e.preventDefault();
-                e.stopPropagation();
-                const codeElement = copyButton.closest('.group')?.querySelector('code[data-command-template]');
-                if (codeElement && codeElement.textContent.trim() !== 'Set target to see command...') {
-                    utils.copyToClipboard(codeElement.textContent, copyButton);
+                e.preventDefault(); e.stopPropagation();
+                const inputElement = copyButton.closest('.group')?.querySelector('input.command-input');
+                if (inputElement && inputElement.value.trim() !== '') {
+                    utils.copyToClipboard(inputElement.value, copyButton);
                 }
             }
         });
@@ -788,25 +778,22 @@ main "$@"
                 elements.depsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         });
+        
+        elements.generateInstallerBtn.addEventListener('click', generateInstallerScript);
+        elements.copyDepsBtn.addEventListener('click', () => { if(generatedInstallerContent) utils.copyToClipboard(generatedInstallerContent, elements.copyDepsBtn)});
 
-        elements.depsContainer.addEventListener('click', (e) => {
-            const copyButton = e.target.closest('.dep-command-btn');
-            if (copyButton && copyButton.dataset.command) {
-                e.preventDefault();
-                utils.copyToClipboard(copyButton.dataset.command, copyButton);
+        elements.searchInput.addEventListener('input', updateGridVisibility);
+        elements.clearSearchBtn.addEventListener('click', () => { elements.searchInput.value = ''; updateGridVisibility(); });
+        elements.tagFilterContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('tag-filter-btn')) {
+                e.target.classList.toggle('active');
+                updateGridVisibility();
             }
         });
-
-        elements.searchInput.addEventListener('input', handleSearch);
-        elements.clearSearchBtn.addEventListener('click', () => {
-            elements.searchInput.value = '';
-            handleSearch();
-        });
-
         elements.resetAllBtn.addEventListener('click', resetAll);
         
         renderFramework();
-        renderDependencies();
+        renderTagFilters();
         updateToolsUI();
     }
 
