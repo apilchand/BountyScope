@@ -1,7 +1,6 @@
 # BountyScope - Reconnaissance Framework
 
 ![BountyScope](https://img.shields.io/badge/BountyScope-Recon%20Framework-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
 ![Version](https://img.shields.io/badge/Version-1.0.0-orange)
 
 A user-friendly web-based reconnaissance framework designed for bug bounty hunters and penetration testers. Build powerful, automated workflows with ease and kickstart your security assessments.
@@ -130,9 +129,6 @@ Contributions are welcome! Here's how you can help:
 3. Test thoroughly
 4. Submit a pull request
 
-## 📝 License
-
-This project is open source. Please add appropriate licensing information based on your preferences.
 
 ## ⚠️ Disclaimer
 
