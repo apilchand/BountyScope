@@ -1,7 +1,7 @@
 # BountyScope - Reconnaissance Framework
 
 ![BountyScope](https://img.shields.io/badge/BountyScope-Recon%20Framework-blue)
-![Version](https://img.shields.io/badge/Version-1.0.0-orange)
+![Version](https://img.shields.io/badge/Version-1.0.1-orange)
 
 A user-friendly web-based reconnaissance framework designed for bug bounty hunters and penetration testers. Build powerful, automated workflows with ease and kickstart your security assessments.
 
@@ -142,7 +142,7 @@ For questions, issues, or suggestions:
 
 ## 🔄 Changelog
 
-### v1.0.0
+### v1.0.1
 - Initial release with 15 reconnaissance phases
 - Support for 50+ security tools
 - Preset workflow configurations
