@@ -1,0 +1,689 @@
+[
+    {
+        "phase": "01",
+        "title": "Domain Intelligence & Technology Profiling",
+        "workflowName": "Domain Intel",
+        "description": "Establish baseline intelligence about the target domain including registration details, DNS infrastructure, and underlying technology stack.",
+        "icon": "ph-detective",
+        "tools": [
+            {
+                "name": "WHOIS Lookup",
+                "type": "cli",
+                "command": "whois [TARGET] | tee $RECON_DIR/info/whois.txt",
+                "description": "Domain registration details",
+                "tags": [
+                    "OSINT"
+                ],
+                "sourceUrl": "https://www.icann.org/whois"
+            },
+            {
+                "name": "Dig DNS Records",
+                "type": "cli",
+                "command": "dig +nocmd [TARGET] any +multiline +noall +answer | tee $RECON_DIR/info/dns.txt",
+                "description": "Complete DNS record enumeration",
+                "tags": [
+                    "Discovery"
+                ],
+                "sourceUrl": null
+            },
+            {
+                "name": "DNSRecon",
+                "type": "cli",
+                "command": "dnsrecon -d [TARGET] -t std --xml $RECON_DIR/info/dnsrecon.xml",
+                "description": "Advanced DNS reconnaissance",
+                "tags": [
+                    "Discovery",
+                    "Active"
+                ],
+                "sourceUrl": "https://github.com/darkoperator/dnsrecon"
+            },
+            {
+                "name": "Wappalyzer",
+                "type": "gui",
+                "url": "https://www.wappalyzer.com/lookup/[TARGET]",
+                "description": "Technology stack identification",
+                "tags": [
+                    "Web"
+                ],
+                "sourceUrl": "https://www.wappalyzer.com/"
+            },
+            {
+                "name": "BuiltWith",
+                "type": "gui",
+                "url": "https://builtwith.com/?[TARGET]",
+                "description": "Comprehensive technology profiler",
+                "tags": [
+                    "Web"
+                ],
+                "sourceUrl": "https://builtwith.com/"
+            }
+        ]
+    },
+    {
+        "phase": "02",
+        "title": "Comprehensive Subdomain Discovery",
+        "workflowName": "Subdomain Discovery",
+        "description": "Employ multiple passive and active techniques to discover all possible subdomains, expanding the attack surface.",
+        "icon": "ph-tree-structure",
+        "tools": [
+            {
+                "name": "Subfinder",
+                "type": "cli",
+                "command": "subfinder -d [TARGET] -all -recursive -o- >> $RECON_DIR/subdomains/raw.txt",
+                "description": "Multi-source passive subdomain discovery",
+                "tags": [
+                    "Discovery",
+                    "Passive"
+                ],
+                "sourceUrl": "https://github.com/projectdiscovery/subfinder"
+            },
+            {
+                "name": "Assetfinder",
+                "type": "cli",
+                "command": "assetfinder --subs-only [TARGET] >> $RECON_DIR/subdomains/raw.txt",
+                "description": "Fast subdomain and asset discovery",
+                "tags": [
+                    "Discovery",
+                    "Passive"
+                ],
+                "sourceUrl": "https://github.com/tomnomnom/assetfinder"
+            },
+            {
+                "name": "Amass Enum",
+                "type": "cli",
+                "command": "amass enum -passive -d [TARGET] -config config.ini -o- >> $RECON_DIR/subdomains/raw.txt",
+                "description": "In-depth subdomain enumeration",
+                "tags": [
+                    "Discovery",
+                    "Active"
+                ],
+                "sourceUrl": "https://github.com/owasp-amass/amass"
+            },
+            {
+                "name": "Findomain",
+                "type": "cli",
+                "command": "findomain -t [TARGET] -q >> $RECON_DIR/subdomains/raw.txt",
+                "description": "Cross-platform subdomain enumerator",
+                "tags": [
+                    "Discovery",
+                    "Passive"
+                ],
+                "sourceUrl": "https://github.com/findomain/findomain"
+            },
+            {
+                "name": "crt.sh",
+                "type": "gui",
+                "url": "https://crt.sh/?q=%25.[TARGET]",
+                "description": "Certificate transparency logs",
+                "tags": [
+                    "Discovery",
+                    "Passive"
+                ],
+                "sourceUrl": "https://crt.sh"
+            },
+            {
+                "name": "Chaos DB",
+                "type": "cli",
+                "command": "chaos -d [TARGET] -o- >> $RECON_DIR/subdomains/raw.txt",
+                "description": "ProjectDiscovery's subdomain dataset",
+                "tags": [
+                    "Discovery",
+                    "Passive"
+                ],
+                "sourceUrl": "https://github.com/projectdiscovery/chaos-client"
+            }
+        ]
+    },
+    {
+        "phase": "03",
+        "title": "DNS Resolution & Live Service Detection",
+        "workflowName": "Live Host Probing",
+        "requires": [
+            "02"
+        ],
+        "description": "Validate discovered subdomains and probe for active web services, filtering out dead hosts and identifying accessible endpoints.",
+        "icon": "ph-broadcast",
+        "tools": [
+            {
+                "name": "dnsx Resolution",
+                "type": "cli",
+                "command": "cat $RECON_DIR/subdomains/final.txt | dnsx -resp -silent -o $RECON_DIR/hosts/resolved.txt",
+                "description": "Fast DNS resolver",
+                "tags": [
+                    "Discovery",
+                    "Active"
+                ],
+                "sourceUrl": "https://github.com/projectdiscovery/dnsx"
+            },
+            {
+                "name": "httpx Probe",
+                "type": "cli",
+                "command": "cat $RECON_DIR/subdomains/final.txt | httpx -title -tech-detect -status-code -probe -fr -o $RECON_DIR/hosts/live.txt",
+                "description": "Advanced HTTP toolkit for probing",
+                "tags": [
+                    "Web",
+                    "Active"
+                ],
+                "sourceUrl": "https://github.com/projectdiscovery/httpx"
+            },
+            {
+                "name": "Httprobe",
+                "type": "cli",
+                "command": "cat $RECON_DIR/subdomains/final.txt | httprobe -c 50 > $RECON_DIR/hosts/live_alt.txt",
+                "description": "Simple HTTP/HTTPS prober",
+                "tags": [
+                    "Web",
+                    "Active"
+                ],
+                "sourceUrl": "https://github.com/tomnomnom/httprobe"
+            }
+        ]
+    },
+    {
+        "phase": "04",
+        "title": "Visual Reconnaissance & Screenshot Analysis",
+        "workflowName": "Visual Recon",
+        "requires": [
+            "03"
+        ],
+        "description": "Capture visual screenshots of live web applications to quickly identify interesting interfaces and visual anomalies.",
+        "icon": "ph-camera-plus",
+        "tools": [
+            {
+                "name": "Gowitness",
+                "type": "cli",
+                "command": "gowitness file -f $RECON_DIR/hosts/live.txt -P $RECON_DIR/screenshots --delay 3 --timeout 15",
+                "description": "Fast web screenshot utility",
+                "tags": [
+                    "Web"
+                ],
+                "sourceUrl": "https://github.com/sensepost/gowitness"
+            },
+            {
+                "name": "Aquatone",
+                "type": "cli",
+                "command": "cat $RECON_DIR/hosts/live.txt | aquatone -out $RECON_DIR/aquatone",
+                "description": "Visual inspection with detailed reporting",
+                "tags": [
+                    "Web"
+                ],
+                "sourceUrl": "https://github.com/michenriksen/aquatone"
+            }
+        ]
+    },
+    {
+        "phase": "05",
+        "title": "Network Scanning & Service Enumeration",
+        "workflowName": "Port Scanning",
+        "requires": [
+            "03"
+        ],
+        "description": "Perform comprehensive port scans across all discovered hosts, identify running services, and map the network topology.",
+        "icon": "ph-radar",
+        "tools": [
+            {
+                "name": "Naabu Fast Scan",
+                "type": "cli",
+                "command": "naabu -list $RECON_DIR/hosts/live.txt -top-ports 1000 -silent -o $RECON_DIR/scans/naabu_ports.txt",
+                "description": "Ultra-fast port scanner",
+                "tags": [
+                    "Scanning"
+                ],
+                "sourceUrl": "https://github.com/projectdiscovery/naabu"
+            },
+            {
+                "name": "Nmap Service Detection",
+                "type": "cli",
+                "command": "nmap -sV -sC -O --script=default,discovery,vuln -iL $RECON_DIR/hosts/live.txt -oA $RECON_DIR/scans/nmap/nmap_detailed",
+                "description": "Comprehensive service and vulnerability scanning",
+                "tags": [
+                    "Scanning",
+                    "Vulnerability"
+                ],
+                "sourceUrl": "https://nmap.org/"
+            },
+            {
+                "name": "RustScan",
+                "type": "cli",
+                "command": "rustscan -a [TARGET] -r 1-65535 -- -A -sC",
+                "description": "Modern fast port scanner",
+                "tags": [
+                    "Scanning"
+                ],
+                "sourceUrl": "https://github.com/RustScan/RustScan"
+            },
+            {
+                "name": "Shodan",
+                "type": "gui",
+                "url": "https://www.shodan.io/search?query=hostname:[TARGET]",
+                "description": "Internet device search engine",
+                "tags": [
+                    "OSINT",
+                    "Scanning"
+                ],
+                "sourceUrl": "https://shodan.io"
+            }
+        ]
+    },
+    {
+        "phase": "06",
+        "title": "Web Crawling & URL Harvesting",
+        "workflowName": "URL Harvesting",
+        "requires": [
+            "03"
+        ],
+        "description": "Systematically crawl discovered web applications and harvest URLs from multiple sources.",
+        "icon": "ph-spider",
+        "tools": [
+            {
+                "name": "Katana Crawler",
+                "type": "cli",
+                "command": "katana -list $RECON_DIR/hosts/live.txt -d 5 -jc -kf all -o- >> $RECON_DIR/urls/raw.txt",
+                "description": "Next-generation crawling framework",
+                "tags": [
+                    "Web",
+                    "Discovery"
+                ],
+                "sourceUrl": "https://github.com/projectdiscovery/katana"
+            },
+            {
+                "name": "Gospider",
+                "type": "cli",
+                "command": "gospider -S $RECON_DIR/hosts/live.txt -c 10 -d 5 -t 20 -q -o- | grep -oE 'http.*' >> $RECON_DIR/urls/raw.txt",
+                "description": "Fast web spider with filtering",
+                "tags": [
+                    "Web",
+                    "Discovery"
+                ],
+                "sourceUrl": "https://github.com/jaeles-project/gospider"
+            },
+            {
+                "name": "Waybackurls",
+                "type": "cli",
+                "command": "cat $RECON_DIR/hosts/live.txt | waybackurls >> $RECON_DIR/urls/raw.txt",
+                "description": "Wayback Machine URL fetcher",
+                "tags": [
+                    "OSINT",
+                    "Passive"
+                ],
+                "sourceUrl": "https://github.com/tomnomnom/waybackurls"
+            },
+            {
+                "name": "Gau (Get All URLs)",
+                "type": "cli",
+                "command": "echo [TARGET] | gau --subs >> $RECON_DIR/urls/raw.txt",
+                "description": "Fetch URLs from multiple sources",
+                "tags": [
+                    "OSINT",
+                    "Passive"
+                ],
+                "sourceUrl": "https://github.com/lc/gau"
+            }
+        ]
+    },
+    {
+        "phase": "07",
+        "title": "Content Discovery & Directory Fuzzing",
+        "workflowName": "Content Fuzzing",
+        "requires": [
+            "03"
+        ],
+        "description": "Systematically discover hidden directories, files, and other concealed content using wordlist-based fuzzing techniques.",
+        "icon": "ph-folder-open",
+        "tools": [
+            {
+                "name": "ffuf Fuzzer",
+                "type": "cli",
+                "command": "ffuf -w /opt/SecLists/Discovery/Web-Content/common.txt -u https://[TARGET]/FUZZ -mc 200,301,302 -o $RECON_DIR/scans/ffuf_root.json",
+                "description": "Fast web fuzzer with smart filtering",
+                "tags": [
+                    "Fuzzing"
+                ],
+                "sourceUrl": "https://github.com/ffuf/ffuf"
+            },
+            {
+                "name": "Gobuster Directory",
+                "type": "cli",
+                "command": "gobuster dir -u https://[TARGET] -w /opt/SecLists/Discovery/Web-Content/common.txt -o $RECON_DIR/scans/gobuster_root.txt",
+                "description": "Directory and file brute-forcer",
+                "tags": [
+                    "Fuzzing"
+                ],
+                "sourceUrl": "https://github.com/OJ/gobuster"
+            }
+        ]
+    },
+    {
+        "phase": "08",
+        "title": "JavaScript Analysis & API Discovery",
+        "workflowName": "JS & API Analysis",
+        "requires": [
+            "06"
+        ],
+        "description": "Extract sensitive information and discover hidden API endpoints from client-side JavaScript files.",
+        "icon": "ph-code",
+        "tools": [
+            {
+                "name": "subjs",
+                "type": "cli",
+                "command": "cat $RECON_DIR/urls/final.txt | grep -iE '\\.js($|\\?)' | subjs | anew $RECON_DIR/urls/js_files.txt",
+                "description": "JavaScript file extractor",
+                "tags": [
+                    "Web"
+                ],
+                "sourceUrl": "https://github.com/lc/subjs"
+            },
+            {
+                "name": "LinkFinder",
+                "type": "cli",
+                "command": "cat $RECON_DIR/urls/js_files.txt | xargs -I % linkfinder -i % -o cli | anew $RECON_DIR/urls/linkfinder.txt",
+                "description": "Discover endpoints in JS files",
+                "tags": [
+                    "Web",
+                    "Discovery"
+                ],
+                "sourceUrl": "https://github.com/GerbenJavado/LinkFinder"
+            },
+            {
+                "name": "SecretFinder",
+                "type": "cli",
+                "command": "cat $RECON_DIR/urls/js_files.txt | xargs -I % secretfinder -i % -o cli | anew $RECON_DIR/scans/secrets.txt",
+                "description": "Find secrets in JavaScript",
+                "tags": [
+                    "Secrets"
+                ],
+                "sourceUrl": "https://github.com/m4ll0k/SecretFinder"
+            }
+        ]
+    },
+    {
+        "phase": "09",
+        "title": "Parameter Discovery & Fuzzing",
+        "workflowName": "Parameter Hunting",
+        "requires": [
+            "06"
+        ],
+        "description": "Identify hidden parameters, analyze parameter behavior, and discover potential injection points.",
+        "icon": "ph-list-bullets",
+        "tools": [
+            {
+                "name": "ParamSpider",
+                "type": "cli",
+                "command": "paramspider -d [TARGET] --exclude woff,css,png,svg,jpg -q -o $RECON_DIR/urls/paramspider",
+                "description": "Parameter discovery from web archives",
+                "tags": [
+                    "Fuzzing",
+                    "Discovery"
+                ],
+                "sourceUrl": "https://github.com/devanshbatham/ParamSpider"
+            },
+            {
+                "name": "Arjun",
+                "type": "cli",
+                "command": "arjun -u https://[TARGET]/ -oT $RECON_DIR/urls/arjun_root.txt",
+                "description": "HTTP parameter discovery suite",
+                "tags": [
+                    "Fuzzing"
+                ],
+                "sourceUrl": "https://github.com/s0md3v/Arjun"
+            },
+            {
+                "name": "GF Patterns",
+                "type": "cli",
+                "command": "cat $RECON_DIR/urls/final.txt | gf xss | anew $RECON_DIR/urls/gf_xss.txt",
+                "description": "Pattern-based URL filtering",
+                "tags": [
+                    "Vulnerability"
+                ],
+                "sourceUrl": "https://github.com/tomnomnom/gf"
+            }
+        ]
+    },
+    {
+        "phase": "10",
+        "title": "Cloud Asset & Storage Discovery",
+        "workflowName": "Cloud Discovery",
+        "description": "Enumerate cloud infrastructure including S3 buckets, Azure blobs, GCP storage, and other misconfigured services.",
+        "icon": "ph-cloud",
+        "tools": [
+            {
+                "name": "S3Scanner",
+                "type": "cli",
+                "command": "# Example: s3scanner -bucket-file buckets.txt -dump",
+                "description": "AWS S3 bucket scanner",
+                "tags": [
+                    "Cloud"
+                ],
+                "sourceUrl": "https://github.com/sa7mon/S3Scanner"
+            },
+            {
+                "name": "Cloud_enum",
+                "type": "cli",
+                "command": "cloud_enum -k [TARGET] -l $RECON_DIR/scans/cloud_enum.txt",
+                "description": "Multi-cloud asset discovery",
+                "tags": [
+                    "Cloud"
+                ],
+                "sourceUrl": "https://github.com/initstring/cloud_enum"
+            }
+        ]
+    },
+    {
+        "phase": "11",
+        "title": "Git Repository & Source Code Analysis",
+        "workflowName": "Source Code Secrets",
+        "description": "Search for exposed repositories, leaked credentials, API keys, and sensitive information in public code repositories.",
+        "icon": "ph-git-branch",
+        "tools": [
+            {
+                "name": "TruffleHog",
+                "type": "cli",
+                "command": "trufflehog github --org=[TARGET] --json > $RECON_DIR/scans/trufflehog.json",
+                "description": "Find secrets in git repositories",
+                "tags": [
+                    "Secrets",
+                    "OSINT"
+                ],
+                "sourceUrl": "https://github.com/trufflesecurity/trufflehog"
+            },
+            {
+                "name": "GitLeaks",
+                "type": "cli",
+                "command": "gitleaks detect --source . -r $RECON_DIR/scans/gitleaks.json",
+                "description": "Detect secrets in git repos",
+                "tags": [
+                    "Secrets"
+                ],
+                "sourceUrl": "https://github.com/gitleaks/gitleaks"
+            }
+        ]
+    },
+    {
+        "phase": "12",
+        "title": "Vulnerability Scanning & Template-Based Testing",
+        "workflowName": "Vulnerability Scanning",
+        "requires": [
+            "03"
+        ],
+        "description": "Execute scans using template-based tools to find common security issues, misconfigurations, and known CVEs.",
+        "icon": "ph-shield-warning",
+        "tools": [
+            {
+                "name": "Nuclei Templates",
+                "type": "cli",
+                "command": "nuclei -l $RECON_DIR/hosts/live.txt -t ~/nuclei-templates/ -s critical,high,medium -o $RECON_DIR/scans/nuclei.txt",
+                "description": "Template-based vulnerability scanner",
+                "tags": [
+                    "Vulnerability",
+                    "Scanning"
+                ],
+                "sourceUrl": "https://github.com/projectdiscovery/nuclei"
+            },
+            {
+                "name": "Nuclei CVE Scan",
+                "type": "cli",
+                "command": "nuclei -l $RECON_DIR/hosts/live.txt -t ~/nuclei-templates/cves/ -s critical,high -o $RECON_DIR/scans/nuclei_cves.txt",
+                "description": "CVE-specific vulnerability detection",
+                "tags": [
+                    "Vulnerability",
+                    "Scanning"
+                ],
+                "sourceUrl": "https://github.com/projectdiscovery/nuclei"
+            },
+            {
+                "name": "testssl.sh",
+                "type": "cli",
+                "command": "testssl.sh --parallel --html --outdir $RECON_DIR/scans/testssl/ [TARGET]",
+                "description": "Comprehensive SSL/TLS tester",
+                "tags": [
+                    "Vulnerability",
+                    "Scanning"
+                ],
+                "sourceUrl": "https://github.com/drwetter/testssl.sh"
+            }
+        ]
+    },
+    {
+        "phase": "13",
+        "title": "Specialized Vulnerability Hunting",
+        "workflowName": "Exploit Hunting",
+        "requires": [
+            "09"
+        ],
+        "description": "Deploy specialized tools targeting specific vulnerability classes like XSS and SQLi.",
+        "icon": "ph-bug",
+        "tools": [
+            {
+                "name": "Dalfox XSS",
+                "type": "cli",
+                "command": "dalfox file $RECON_DIR/urls/gf_xss.txt --silence -o $RECON_DIR/scans/dalfox.txt",
+                "description": "Advanced XSS scanner and analyzer",
+                "tags": [
+                    "Vulnerability",
+                    "Web"
+                ],
+                "sourceUrl": "https://github.com/hahwul/dalfox"
+            },
+            {
+                "name": "SQLMap",
+                "type": "cli",
+                "command": "sqlmap -m $RECON_DIR/urls/gf_sqli.txt --batch --level=5 --risk=3 --output-dir=$RECON_DIR/scans/sqlmap/ -v 1",
+                "description": "Automatic SQL injection tester",
+                "tags": [
+                    "Vulnerability",
+                    "Web"
+                ],
+                "sourceUrl": "http://sqlmap.org/"
+            }
+        ]
+    },
+    {
+        "phase": "14",
+        "title": "CMS & Framework Security Assessment",
+        "workflowName": "CMS Scanning",
+        "requires": [
+            "03"
+        ],
+        "description": "Identify and assess Content Management Systems for known vulnerabilities and misconfigurations.",
+        "icon": "ph-gear-six",
+        "tools": [
+            {
+                "name": "WPScan",
+                "type": "cli",
+                "command": "wpscan --url https://[TARGET] --enumerate ap,at,u -o $RECON_DIR/scans/wpscan.json -f json",
+                "description": "WordPress vulnerability scanner",
+                "tags": [
+                    "Vulnerability",
+                    "Web"
+                ],
+                "sourceUrl": "https://wpscan.com/"
+            },
+            {
+                "name": "Nikto Web Scanner",
+                "type": "cli",
+                "command": "nikto -h https://[TARGET] -ssl -output $RECON_DIR/scans/nikto.txt",
+                "description": "Web server vulnerability scanner",
+                "tags": [
+                    "Web",
+                    "Vulnerability",
+                    "Scanning"
+                ],
+                "sourceUrl": "https://cirt.net/Nikto2"
+            }
+        ]
+    },
+    {
+        "phase": "15",
+        "title": "Essential Resources & Wordlists",
+        "workflowName": "Resource Library",
+        "description": "Curated collection of essential wordlists and payloads for comprehensive security testing.",
+        "icon": "ph-books",
+        "isResource": true,
+        "tools": [
+            {
+                "name": "SecLists",
+                "type": "gui",
+                "url": "https://github.com/danielmiessler/SecLists",
+                "noTarget": true,
+                "description": "Security tester's companion wordlist collection",
+                "tags": [
+                    "Fuzzing"
+                ],
+                "sourceUrl": "https://github.com/danielmiessler/SecLists"
+            },
+            {
+                "name": "PayloadsAllTheThings",
+                "type": "gui",
+                "url": "https://github.com/swisskyrepo/PayloadsAllTheThings",
+                "noTarget": true,
+                "description": "Web application security payload repository",
+                "tags": [
+                    "Vulnerability"
+                ],
+                "sourceUrl": "https://github.com/swisskyrepo/PayloadsAllTheThings"
+            }
+        ]
+    },
+    {
+        "phase": "16",
+        "title": "Post-Exploitation & Reporting",
+        "workflowName": "Pwn & Report",
+        "description": "Tools for vulnerability validation, privilege escalation, and generating reports from collected evidence.",
+        "icon": "ph-file-text",
+        "isResource": true,
+        "tools": [
+            {
+                "name": "PayloadsAllTheThings",
+                "type": "gui",
+                "url": "https://github.com/swisskyrepo/PayloadsAllTheThings",
+                "noTarget": true,
+                "description": "A comprehensive list of payloads for all types of vulnerabilities.",
+                "tags": [
+                    "Vulnerability",
+                    "Exploitation"
+                ]
+            },
+            {
+                "name": "GTFOBins",
+                "type": "gui",
+                "url": "https://gtfobins.github.io/",
+                "noTarget": true,
+                "description": "Curated list of Unix binaries for bypassing local security restrictions.",
+                "tags": [
+                    "Exploitation"
+                ]
+            },
+            {
+                "name": "HackTricks",
+                "type": "gui",
+                "url": "https://book.hacktricks.xyz/",
+                "noTarget": true,
+                "description": "An extensive resource of pentesting tricks and techniques.",
+                "tags": [
+                    "Exploitation"
+                ]
+            }
+            
+        ]
+    }
+]
