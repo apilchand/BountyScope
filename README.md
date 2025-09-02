@@ -37,27 +37,9 @@ A user-friendly web-based reconnaissance framework designed for bug bounty hunte
 
 ## 🛠️ Installation
 
-No installation required! BountyScope runs directly in your web browser.
+No installation required! BountyScope runs directly in your web browser
 
-1. **Clone or download** the project files:
-   ```bash
-   git clone <repository-url>
-   cd BountyScope
-   ```
-
-2. **Open** `index.html` in your web browser:
-   ```bash
-   # On macOS
-   open index.html
-   
-   # On Linux
-   xdg-open index.html
-   
-   # On Windows
-   start index.html
-   ```
-
-3. **Start using** BountyScope immediately!
+Clone it and **Start using** BountyScope immediately!
 
 ## 📖 Usage
 
