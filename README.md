@@ -1,7 +1,7 @@
 # BountyScope - Reconnaissance Framework
 
 ![BountyScope](https://img.shields.io/badge/BountyScope-Recon%20Framework-blue)
-![Version](https://img.shields.io/badge/Version-1.0.1-orange)
+![Version](https://img.shields.io/badge/Version-1.1.0-orange)
 
 A user-friendly web-based reconnaissance framework designed for bug bounty hunters and penetration testers. Build powerful, automated workflows with ease and kickstart your security assessments.
 
@@ -33,6 +33,7 @@ A user-friendly web-based reconnaissance framework designed for bug bounty hunte
 13. **Specialized Vulnerability Hunting** - XSS, SQLi, SSRF, and other specific tests
 14. **CMS & Framework Security Assessment** - CMS-specific vulnerability scanning
 15. **Essential Resources & Wordlists** - Curated security resources
+16. **Post-Exploitation & Reporting** - Tools for vulnerability validation, privilege escalation, and generating reports from collected evidence
 
 ## 🛠️ Installation
 
@@ -91,7 +92,10 @@ The generated scripts require various security tools. Use the "View Dependencies
 BountyScope/
 ├── index.html          # Main application interface
 ├── style.css          # Styling and animations
-├── script.js          # Application logic and functionality
+├── app.js             # Main application logic and functionality
+├── ui.js              # UI rendering and component management
+├── api.js             # Data fetching utilities
+├── data.json          # Reconnaissance phases and tools configuration
 └── README.md          # This documentation file
 ```
 
@@ -112,6 +116,7 @@ BountyScope supports a wide range of security tools including:
 - **Specialized Testing**: Dalfox, SQLMap, SSRFmap, Commix
 - **Cloud & S3**: S3Scanner, Cloud_enum, CloudBrute
 - **Secret Scanning**: TruffleHog, GitLeaks, GitHound
+- **Post-Exploitation**: PayloadsAllTheThings, GTFOBins, HackTricks
 
 ## 🤝 Contributing
 
@@ -141,6 +146,15 @@ For questions, issues, or suggestions:
 - Check the documentation for common questions
 
 ## 🔄 Changelog
+
+### v1.1.0
+- Added new phase 16: Post-Exploitation & Reporting with tools for vulnerability validation, privilege escalation, and reporting
+- Enhanced flexibility: Easily add new tools and phases by updating `data.json` configuration file
+- Updated UI with Tailwind CSS and Phosphor icons for modern look and feel
+- Added preset workflows for quick scan selections (Passive, Quick, Deep, Web Vuln, Full)
+- Improved script generation with detailed logging and workflow mapping
+- Enhanced dependency management with automated installer script generation
+- Fixed project structure documentation to reflect actual files
 
 ### v1.0.1
 - Initial release with 15 reconnaissance phases
